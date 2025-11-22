@@ -1,35 +1,49 @@
 // src/adapters/ui/react/chat/ChatbotHeader.tsx
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ChatTheme } from "../../../core/domain/constants/chatTheme";
+import { IconCog } from "../components/icons";
+import {
+  LANGUAGE_OPTIONS,
+  DEFAULT_LANG,
+} from "../../../infrastructure/i18n/langs";
 
 export interface ChatbotHeaderProps {
   theme: ChatTheme;
   onToggleMinimize?: () => void;
   onLogout?: () => void;
   showLogout?: boolean;
-  currentLanguage?: string; // p.ej. "es", "ca", "en"
+  currentLanguage?: string; // p.ej. "es", "ca", "en", etc.
   onChangeLanguage?: (lang: string) => void;
 }
-
-const LANGUAGE_OPTIONS: { code: string; label: string }[] = [
-  { code: "es", label: "Español" },
-  { code: "ca", label: "Català" },
-  { code: "en", label: "English" },
-];
 
 const ChatbotHeader = ({
   theme,
   onToggleMinimize,
   onLogout,
   showLogout,
-  currentLanguage = "es",
+  currentLanguage = DEFAULT_LANG,
   onChangeLanguage,
 }: ChatbotHeaderProps) => {
-  const { header } = theme;
-  const title = header.title;
-  const subtitle = header.subtitle;
-  const badgeText = header.badgeText;
-  const logoEmoji = header.logoEmoji ?? "🤖";
+  const { t } = useTranslation("common");
+
+  const {
+    header: {
+      title,
+      titleKey,
+      subtitle,
+      subtitleKey,
+      badgeText,
+      badgeTextKey,
+      logoEmoji,
+    },
+  } = theme;
+
+  // Resolvemos textos usando i18n si hay key; si no, fallback al literal
+  const resolvedTitle = titleKey ? t(titleKey, { defaultValue: title }) : title;
+  const resolvedSubtitle = subtitleKey
+    ? t(subtitleKey, { defaultValue: subtitle })
+    : subtitle;
 
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
 
@@ -60,20 +74,15 @@ const ChatbotHeader = ({
 
   return (
     <header className="ia-chatbot-header">
-      <div>
+      <div className="ia-chatbot-header-left">
         <div className="ia-chatbot-header-title">
-          <span className="ia-chatbot-header-logo">{logoEmoji}</span>
-          {title}
+          <span className="ia-chatbot-header-logo">{logoEmoji ?? "🤖"}</span>
+          {resolvedTitle}
         </div>
-        <div className="ia-chatbot-header-subtitle">{subtitle}</div>
+        <div className="ia-chatbot-header-subtitle">{resolvedSubtitle}</div>
       </div>
 
       <div className="ia-chatbot-header-right">
-        {badgeText && (
-          <div className="ia-chatbot-header-badge">{badgeText}</div>
-        )}
-
-        {/* Botón de settings + dropdown */}
         <div className="ia-chatbot-header-actions">
           <button
             type="button"
@@ -81,26 +90,30 @@ const ChatbotHeader = ({
             onClick={toggleMenu}
             aria-haspopup="true"
             aria-expanded={menuOpen}
-            aria-label="Ajustes del asistente"
+            aria-label={t("chat_header_settings_aria")}
           >
-            <span className="ia-chatbot-header-settings-icon">⚙️</span>
+            <span className="ia-chatbot-header-settings-icon">
+              <IconCog size={16} />
+            </span>
           </button>
 
           {onToggleMinimize && (
             <button
               type="button"
-              className="ia-chatbot-minimize-button"
+              className="ia-chatbot-header-settings-button"
               onClick={handleMinimizeClick}
-              aria-label="Minimizar asistente"
+              aria-label={t("chat_header_minimize_aria")}
             >
-              <span className="ia-chatbot-minimize-icon">—</span>
+              <span className="ia-chatbot-header-settings-icon">—</span>
             </button>
           )}
 
           {menuOpen && (
             <div className="ia-chatbot-header-menu" role="menu">
               <div className="ia-chatbot-header-menu-section">
-                <div className="ia-chatbot-header-menu-title">Idioma</div>
+                <div className="ia-chatbot-header-menu-title">
+                  {t("chat_menu_language_title")}
+                </div>
                 <div className="ia-chatbot-header-menu-list">
                   {LANGUAGE_OPTIONS.map((opt) => (
                     <button
@@ -134,7 +147,7 @@ const ChatbotHeader = ({
                     role="menuitem"
                   >
                     <span className="ia-chatbot-header-menu-item-label">
-                      ⎋ Cerrar sesión
+                      ⎋ {t("chat_menu_logout_label")}
                     </span>
                   </button>
                 </>

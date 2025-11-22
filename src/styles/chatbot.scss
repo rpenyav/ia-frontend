@@ -47,10 +47,13 @@
 
 .ia-chatbot-header-title {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 28px;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.65rem;
+  border-right: 1px solid #ffffff;
+  padding-right: 0.75rem;
+  margin-right: 0.45rem;
 }
 
 .ia-chatbot-header-logo {
@@ -196,7 +199,7 @@
 .ia-chatbot-textarea {
   flex: 1;
   resize: none;
-  min-height: 2.5rem;
+  min-height: 1.5rem;
   max-height: 6rem;
   padding: 0.5rem;
   font-size: 0.875rem;
@@ -205,14 +208,24 @@
 }
 
 .ia-chatbot-send-button {
-  padding: 0 1rem;
-  border-radius: 999px;
   border: none;
   background-color: #2563eb;
   color: #ffffff;
-  font-size: 0.875rem;
+
+  /* círculo fijo */
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+
+  /* centrado del icono */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* sin padding para no descentrar */
+  padding: 0;
+
   cursor: pointer;
-  white-space: nowrap;
 }
 
 .ia-chatbot-send-button:disabled {
@@ -306,6 +319,7 @@
 .ia-chatbot-modal-input {
   width: 100%;
   margin-top: 0.25rem;
+  box-sizing: border-box;
   padding: 0.4rem 0.5rem;
   font-size: 0.85rem;
   border-radius: 0.5rem;
@@ -394,13 +408,13 @@
 /* Burbuja flotante (modo minimizado) */
 .ia-chatbot-bubble {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: 36px;
+  bottom: 36px;
   z-index: 2147483647;
   pointer-events: auto;
 
-  width: 52px;
-  height: 52px;
+  width: 82px;
+  height: 82px;
   border-radius: 999px;
   border: none;
   cursor: pointer;
@@ -444,10 +458,14 @@
 .ia-chatbot-header-settings-button {
   border: none;
   background: transparent;
-  padding: 0.25rem;
-  border-radius: 999px;
+
+  border-radius: 50%;
   cursor: pointer;
+  height: 28px;
+  width: 28px;
   color: inherit;
+
+  /* 👇 AÑADIMOS ESTO */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -459,6 +477,7 @@
 
 .ia-chatbot-header-settings-icon {
   display: block;
+  line-height: 0; /* opcional, ayuda a evitar desajustes verticales */
 }
 
 /* Menú desplegable del header */
@@ -533,4 +552,187 @@
 
 .ia-chatbot-header-menu-item-danger:hover {
   background-color: #fee2e2;
+}
+
+/* Lista de adjuntos en el input */
+.ia-chatbot-attachments-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.ia-chatbot-attachment-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+  font-size: 0.75rem;
+  color: #374151;
+}
+
+.ia-chatbot-attachment-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ia-chatbot-attachment-size {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.ia-chatbot-attachment-remove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+  color: #6b7280;
+}
+
+.ia-chatbot-attachment-remove:hover {
+  color: #111827;
+}
+
+.ia-chatbot-attachments-error {
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  color: #b91c1c;
+}
+
+/* Botones dentro del input (adjuntar + enviar) */
+.ia-chatbot-input-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-left: 0.5rem;
+  gap: 0.25rem;
+}
+
+.ia-chatbot-attach-button {
+  border: none;
+  background-color: #e5e7eb;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  padding: 0.25rem 0.45rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.ia-chatbot-attach-button:hover {
+  background-color: #d1d5db;
+}
+
+/* Adjuntos mostrados debajo del mensaje de usuario */
+.ia-chatbot-message-attachments {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+}
+
+.ia-chatbot-attachment-link {
+  color: inherit;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+/* Fila de chips de adjuntos pendientes (antes de enviar) */
+.ia-chatbot-attachments-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Chip individual de adjunto pendiente */
+.ia-chatbot-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+  font-size: 0.7rem;
+  color: #111827;
+}
+
+/* Botón de quitar chip */
+.ia-chatbot-attachment-chip-remove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0;
+}
+
+/* Adjuntos ya enviados dentro de un mensaje humano */
+.ia-chatbot-message-attachments {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ia-chatbot-message-attachment-link {
+  font-size: 0.75rem;
+  text-decoration: underline;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.ia-chatbot-message-attachment-link:hover {
+  opacity: 1;
+}
+
+/* Botón de clip en el input */
+.ia-chatbot-attach-button {
+  border: none;
+  background-color: #f3f4f6;
+  color: #111827;
+  border-radius: 999px;
+  padding: 0 0.6rem;
+  margin-right: 0.4rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.ia-chatbot-attach-button:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.ia-chatbot-attach-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Pequeño badge cuando hay subida en curso */
+.ia-chatbot-attach-badge {
+  margin-left: 0.25rem;
+  font-size: 0.7rem;
+}
+
+/* Contenedor izquierdo: título + subtítulo en línea */
+.ia-chatbot-header-left {
+  display: flex;
+  align-items: center; /* o baseline si quieres que el subtítulo se “pegue” a la línea del título */
+  gap: 0.5rem;
+}
+
+/* Ya lo tienes, solo ajusto un poco el comportamiento inline */
+.ia-chatbot-header-subtitle {
+  font-size: 0.75rem;
+  opacity: 0.92;
+  white-space: pre-line; /* respeta los \n del texto */
 }

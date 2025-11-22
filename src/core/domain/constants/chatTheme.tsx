@@ -1,8 +1,9 @@
-// src/core/domain/constants/chatTheme.ts
+// src/core/domain/constants/chatTheme.tsx
+import type { ReactNode } from "react";
+import LogoNeria from "../../../adapters/ui/components/LogoNeria";
 
 export interface ChatTheme {
   panel: {
-    /** Puede ser número (px) o string tipo "420px" / "100%" */
     width: number | string;
     height: number | string;
     borderRadius: number;
@@ -24,15 +25,22 @@ export interface ChatTheme {
     botBubbleText: string;
   };
   header: {
+    /** Texto por defecto (fallback) */
     title: string;
     subtitle: string;
     badgeText?: string;
-    /** Emoji o texto corto a modo de “logo” */
-    logoEmoji?: string;
+
+    /** Claves i18n opcionales */
+    titleKey?: string;
+    subtitleKey?: string;
+    badgeTextKey?: string;
+
+    /** Emoji, texto corto o componente React a modo de “logo” */
+    logoEmoji?: ReactNode;
   };
   widget: {
     /** Emoji/icono de la burbuja flotante */
-    bubbleEmoji?: string;
+    bubbleEmoji?: ReactNode;
   };
 }
 
@@ -59,13 +67,21 @@ export const DEFAULT_CHAT_THEME: ChatTheme = {
     botBubbleText: "#111827",
   },
   header: {
-    title: "IA Empresas",
-    subtitle: "Asistente inteligente para tu web",
+    // Fallbacks
+    title: "Neria",
+    subtitle: "Asistente inteligente\npara tu web",
     badgeText: "Beta",
-    logoEmoji: "🤖",
+
+    // Claves i18n (namespace "common")
+    titleKey: "chat_title",
+    subtitleKey: "chat_subtitle",
+    badgeTextKey: "chat_badge_text",
+
+    // ahora puede ser un componente React
+    logoEmoji: <LogoNeria size={26} />,
   },
   widget: {
-    bubbleEmoji: "💬",
+    bubbleEmoji: <LogoNeria size={36} />,
   },
 };
 

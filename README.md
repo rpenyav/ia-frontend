@@ -49,7 +49,7 @@ CHAT_AUTH_MODE=local
 Para configurar el aspecto visual del chatbot (anchura, altura, bordes, colores, etc.) hay que editar el archivo:
 
 ```
-src/core/domain/constants/chatTheme.ts
+src/core/domain/constants/chatTheme.tsx
 ```
 
 Desde este archivo se pueden ajustar, entre otros:

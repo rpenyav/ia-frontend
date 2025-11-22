@@ -6,4 +6,6 @@ export const API_ENDPOINTS = {
   CONVERSATION_DETAIL: (id: string) => `/conversations/${id}`,
 
   CHAT_MESSAGE: "/chat/message",
+  UPLOAD_SINGLE: "/uploads",
+  UPLOAD_MULTIPLE: "/uploads/multiple",
 } as const;

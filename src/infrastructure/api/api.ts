@@ -1,5 +1,3 @@
-// src/infrastructure/api/api.ts
-
 import { getApiBaseUrl, getAuthToken } from "../config/env";
 
 export class ApiError extends Error {
@@ -37,8 +35,13 @@ export async function fetchWithAuth<T = unknown>(
     ...restOptions
   } = options;
 
+  const isFormData =
+    typeof FormData !== "undefined" && restOptions.body instanceof FormData;
+
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    // ⚠️ Importante: NO ponemos Content-Type si es FormData,
+    // el navegador se encarga (boundary, etc.)
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(customHeaders as Record<string, string> | undefined),
   };
 
@@ -53,7 +56,7 @@ export async function fetchWithAuth<T = unknown>(
       headers,
       credentials: "include",
     });
-  } catch (err) {
+  } catch {
     // Error de red / CORS / servidor caído
     throw new ApiError(0, url, "Error de red al conectar con el servidor.");
   }
@@ -85,7 +88,7 @@ export async function fetchWithAuth<T = unknown>(
   let text: string;
   try {
     text = await response.text();
-  } catch (err) {
+  } catch {
     throw new ApiError(
       response.status,
       url,
@@ -98,9 +101,7 @@ export async function fetchWithAuth<T = unknown>(
   if (text && text.length > 0) {
     try {
       json = JSON.parse(text);
-    } catch (err) {
-      // Aquí es donde te estaba saltando el
-      // "Error parseando JSON de la respuesta de /chat/message"
+    } catch {
       throw new ApiError(
         response.status,
         url,

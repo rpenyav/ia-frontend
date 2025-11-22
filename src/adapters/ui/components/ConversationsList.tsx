@@ -1,5 +1,6 @@
 // src/adapters/ui/react/chat/ConversationsList.tsx
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import type { Conversation } from "../../../interfaces";
 
 export interface ConversationsListProps {
@@ -19,9 +20,29 @@ export const ConversationsList = ({
   onCreateConversation,
   onDeleteConversation,
 }: ConversationsListProps) => {
+  const { t } = useTranslation("common");
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  /**
+   * Si no hay conversación seleccionada pero sí hay conversaciones,
+   * seleccionamos por defecto la última creada (último elemento del array).
+   * Esto solo actúa como *fallback*: si el contexto ya ha cargado una
+   * conversación persistida, `selectedConversationId` vendrá informado
+   * y no entraremos aquí.
+   */
+  useEffect(() => {
+    if (loading) return;
+    if (selectedConversationId) return;
+    if (!conversations || conversations.length === 0) return;
+
+    const lastConversation = conversations[conversations.length - 1];
+    if (lastConversation && lastConversation.id) {
+      void onChange(lastConversation.id);
+    }
+  }, [loading, selectedConversationId, conversations, onChange]);
 
   const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value || null;
@@ -66,8 +87,6 @@ export const ConversationsList = ({
   return (
     <>
       <div className="ia-chatbot-toolbar">
-        {/* <span className="ia-chatbot-toolbar-label">Conversación</span> */}
-
         <div className="ia-chatbot-toolbar-actions">
           <select
             className="ia-chatbot-select"
@@ -75,7 +94,12 @@ export const ConversationsList = ({
             onChange={handleSelectChange}
             disabled={loading || conversations.length === 0}
           >
-            <option value="">Selecciona una conversación...</option>
+            <option value="">
+              {t(
+                "conversations_select_placeholder",
+                "Selecciona una conversación..."
+              )}
+            </option>
             {conversations.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.title}
@@ -89,7 +113,7 @@ export const ConversationsList = ({
             onClick={handleOpenCreate}
             disabled={loading}
           >
-            Nueva
+            {t("conversations_new_button", "Nueva")}
           </button>
 
           <button
@@ -98,7 +122,7 @@ export const ConversationsList = ({
             onClick={handleOpenDelete}
             disabled={loading || !selectedConversationId}
           >
-            Eliminar
+            {t("conversations_delete_button", "Eliminar")}
           </button>
         </div>
       </div>
@@ -107,10 +131,12 @@ export const ConversationsList = ({
       {showCreateModal && (
         <div className="ia-chatbot-modal-backdrop">
           <div className="ia-chatbot-modal">
-            <h2 className="ia-chatbot-modal-title">Nueva conversación</h2>
+            <h2 className="ia-chatbot-modal-title">
+              {t("conversations_create_title", "Nueva conversación")}
+            </h2>
             <form onSubmit={handleCreateSubmit}>
               <label className="ia-chatbot-modal-label">
-                Título de la conversación
+                {t("conversations_create_label", "Título de la conversación")}
                 <input
                   className="ia-chatbot-modal-input"
                   type="text"
@@ -126,14 +152,14 @@ export const ConversationsList = ({
                   className="ia-chatbot-button ia-chatbot-button-secondary"
                   onClick={handleCloseCreate}
                 >
-                  Cancelar
+                  {t("common_cancel", "Cancelar")}
                 </button>
                 <button
                   type="submit"
                   className="ia-chatbot-button ia-chatbot-button-primary"
                   disabled={!newTitle.trim()}
                 >
-                  Crear
+                  {t("common_create", "Crear")}
                 </button>
               </div>
             </form>
@@ -145,9 +171,14 @@ export const ConversationsList = ({
       {showDeleteModal && (
         <div className="ia-chatbot-modal-backdrop">
           <div className="ia-chatbot-modal">
-            <h2 className="ia-chatbot-modal-title">Eliminar conversación</h2>
+            <h2 className="ia-chatbot-modal-title">
+              {t("conversations_delete_title", "Eliminar conversación")}
+            </h2>
             <p className="ia-chatbot-modal-label">
-              ¿Seguro que quieres eliminar la conversación seleccionada?
+              {t(
+                "conversations_delete_confirm",
+                "¿Seguro que quieres eliminar la conversación seleccionada?"
+              )}
             </p>
 
             <div className="ia-chatbot-modal-actions">
@@ -156,14 +187,14 @@ export const ConversationsList = ({
                 className="ia-chatbot-button ia-chatbot-button-secondary"
                 onClick={handleCancelDelete}
               >
-                Cancelar
+                {t("common_cancel", "Cancelar")}
               </button>
               <button
                 type="button"
                 className="ia-chatbot-button ia-chatbot-button-primary"
                 onClick={handleConfirmDelete}
               >
-                Eliminar
+                {t("conversations_delete_button", "Eliminar")}
               </button>
             </div>
           </div>

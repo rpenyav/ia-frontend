@@ -2,12 +2,24 @@
 import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import ChatbotHeader from "./ChatbotHeader";
 import { getChatTheme } from "../../../core/domain/constants/chatTheme";
+import i18n from "../../../infrastructure/i18n";
+import {
+  getInitialLanguage,
+  persistLanguage,
+} from "../../../infrastructure/i18n/langs";
 
 export interface ChatbotLayoutProps {
   children: ReactNode;
   onLogout?: () => void;
   showLogout?: boolean;
-  currentLanguage?: string; // "es" | "ca" | "en"...
+  /**
+   * Idioma actual controlado desde fuera (opcional).
+   * Si no se informa, el layout usa su propio estado interno + localStorage.
+   */
+  currentLanguage?: string;
+  /**
+   * Callback opcional para informar al host de cambios de idioma.
+   */
   onChangeLanguage?: (lang: string) => void;
 }
 
@@ -21,6 +33,22 @@ const ChatbotLayout = ({
   onChangeLanguage,
 }: ChatbotLayoutProps) => {
   const theme = getChatTheme();
+
+  // Estado interno de idioma (solo se usa si NO hay currentLanguage controlado)
+  const [internalLanguage, setInternalLanguage] = useState<string>(() =>
+    getInitialLanguage()
+  );
+
+  // Idioma efectivo: si el host pasa currentLanguage, mandamos ese;
+  // si no, usamos el interno.
+  const effectiveLanguage = currentLanguage ?? internalLanguage;
+
+  // Sincronizamos i18n cada vez que cambie el idioma efectivo
+  useEffect(() => {
+    void i18n.changeLanguage(effectiveLanguage);
+    // también persistimos siempre el efectivo (sea interno o externo)
+    persistLanguage(effectiveLanguage);
+  }, [effectiveLanguage]);
 
   const [isOpen, setIsOpen] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -38,6 +66,22 @@ const ChatbotLayout = ({
 
   const handleOpen = () => setIsOpen(true);
   const handleMinimize = () => setIsOpen(false);
+
+  // Handler cuando el header cambia el idioma
+  const handleHeaderChangeLanguage = (lang: string) => {
+    // Si NO hay idioma controlado desde fuera, actualizamos el interno
+    if (!currentLanguage) {
+      setInternalLanguage(lang);
+    }
+
+    // Informamos al host si lo desea
+    if (onChangeLanguage) {
+      onChangeLanguage(lang);
+    }
+
+    // i18n + persistencia ya se sincronizan por el useEffect(effectiveLanguage)
+    // porque effectiveLanguage cambia cuando internalLanguage o currentLanguage cambian.
+  };
 
   // CSS custom properties derivadas del theme
   const cssVars: CSSProperties = {
@@ -87,8 +131,8 @@ const ChatbotLayout = ({
               onToggleMinimize={handleMinimize}
               onLogout={onLogout}
               showLogout={showLogout}
-              currentLanguage={currentLanguage}
-              onChangeLanguage={onChangeLanguage}
+              currentLanguage={effectiveLanguage}
+              onChangeLanguage={handleHeaderChangeLanguage}
             />
             <div className="ia-chatbot-body">{children}</div>
           </div>

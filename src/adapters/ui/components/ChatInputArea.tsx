@@ -1,10 +1,18 @@
-import { useEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
+// src/adapters/ui/react/chat/ChatInputArea.tsx
+import type { ChangeEvent, KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
+import type { ChatAttachment } from "../../../interfaces";
+import { IconClip, IconSend } from "./icons";
 
 export interface ChatInputAreaProps {
   value: string;
   onChange: (value: string) => void;
   onSend: () => void;
   disabled?: boolean;
+  attachments: ChatAttachment[];
+  onOpenAttachmentsModal: () => void;
+  onRemoveAttachment: (key: string) => void;
+  isUploadingAttachments: boolean;
 }
 
 export const ChatInputArea = ({
@@ -12,66 +20,95 @@ export const ChatInputArea = ({
   onChange,
   onSend,
   disabled,
+  attachments,
+  onOpenAttachmentsModal,
+  onRemoveAttachment,
+  isUploadingAttachments,
 }: ChatInputAreaProps) => {
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const { t } = useTranslation("common");
 
-  const adjustHeight = () => {
-    const el = textareaRef.current;
-    if (!el) return;
-
-    // resetear primero para recalcular
-    el.style.height = "auto";
-
-    // crecer hasta su scrollHeight (el max-height lo controla el SCSS)
-    el.style.height = `${el.scrollHeight}px`;
+  const handleTextareaChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    onChange(event.target.value);
   };
 
-  useEffect(() => {
-    adjustHeight();
-  }, [value]);
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (!disabled) {
+        onSend();
+      }
+    }
+  };
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!disabled && value.trim().length > 0) {
+  const handleClickSend = () => {
+    if (!disabled) {
       onSend();
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter sin Shift → enviar
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (!disabled && value.trim().length > 0) {
-        onSend();
-      }
-    }
-    // Shift+Enter → permitimos salto de línea normal
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-    // el useEffect se encargará de ajustar la altura al cambiar value
-  };
+  const showAttachmentsRow = attachments.length > 0;
 
   return (
-    <form className="ia-chatbot-input-wrapper" onSubmit={handleSubmit}>
-      <textarea
-        ref={textareaRef}
-        className="ia-chatbot-textarea"
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder="Escribe tu mensaje..."
-        disabled={disabled}
-        rows={1}
-      />
+    <div className="ia-chatbot-input-wrapper">
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Chips de adjuntos pendientes */}
+        {showAttachmentsRow && (
+          <div className="ia-chatbot-attachments-row">
+            {attachments.map((att) => (
+              <div
+                key={att.key ?? att.url}
+                className="ia-chatbot-attachment-chip"
+              >
+                <span>📎 {att.filename}</span>
+                <button
+                  type="button"
+                  className="ia-chatbot-attachment-chip-remove"
+                  onClick={() => onRemoveAttachment(att.key ?? att.url)}
+                  aria-label={t("chat_input_remove_attachment_aria", {
+                    filename: att.filename,
+                  })}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Caja de texto */}
+        <textarea
+          className="ia-chatbot-textarea"
+          placeholder={t("chat_input_placeholder")}
+          value={value}
+          onChange={handleTextareaChange}
+          onKeyDown={handleKeyDown}
+          disabled={disabled}
+        />
+      </div>
+
+      {/* Botón para abrir modal de adjuntos */}
       <button
-        type="submit"
-        disabled={disabled || value.trim().length === 0}
-        className="ia-chatbot-send-button"
+        type="button"
+        className="ia-chatbot-attach-button"
+        onClick={onOpenAttachmentsModal}
+        disabled={disabled}
+        title={t("chat_input_attach_title")}
       >
-        Enviar
+        <IconClip size={18} color={disabled ? "#999999" : "#555555"} />
+        {isUploadingAttachments && (
+          <span className="ia-chatbot-attach-badge">...</span>
+        )}
       </button>
-    </form>
+
+      {/* Botón enviar */}
+      <button
+        type="button"
+        className="ia-chatbot-send-button"
+        onClick={handleClickSend}
+        disabled={disabled}
+      >
+        <IconSend size={18} color={disabled ? "#ffffff" : "#ffffff"} />
+      </button>
+    </div>
   );
 };
