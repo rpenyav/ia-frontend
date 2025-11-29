@@ -1,5 +1,5 @@
 // src/adapters/ui/react/chat/ChatbotHeader.tsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ChatTheme } from "../../../core/domain/constants/chatTheme";
 import { IconCog } from "../components/icons";
@@ -33,8 +33,7 @@ const ChatbotHeader = ({
       titleKey,
       subtitle,
       subtitleKey,
-      badgeText,
-      badgeTextKey,
+
       logoEmoji,
     },
   } = theme;

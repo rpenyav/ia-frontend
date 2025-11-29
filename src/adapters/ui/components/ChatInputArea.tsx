@@ -91,7 +91,8 @@ export const ChatInputArea = ({
         type="button"
         className="ia-chatbot-attach-button"
         onClick={onOpenAttachmentsModal}
-        disabled={disabled}
+        // disabled={disabled}
+        disabled={true}
         title={t("chat_input_attach_title")}
       >
         <IconClip size={18} color={disabled ? "#999999" : "#555555"} />

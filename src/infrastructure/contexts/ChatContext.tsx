@@ -27,6 +27,8 @@ const chatService = new ChatService(chatRepository);
 
 const IS_EPHEMERAL = isAuthModeNone;
 
+type UsageMode = "idle" | "active" | "cooldown";
+
 interface ChatContextValue {
   conversations: Conversation[];
   selectedConversationId: string | null;
@@ -35,6 +37,9 @@ interface ChatContextValue {
   loadingMessages: boolean;
   isStreaming: boolean;
   error: string;
+
+  usageMode: UsageMode;
+  usageRemainingMs: number | null;
 
   reloadConversations: () => Promise<void>;
   selectConversation: (idOrNew: string | null) => Promise<void>;
@@ -59,6 +64,139 @@ export interface ChatProviderProps {
 
 const SELECTED_CONVERSATION_STORAGE_KEY = "ia_chat_selected_conversation_id";
 
+// Limitador de uso
+const USAGE_STORAGE_KEY = "ia_chat_usage_state";
+const USAGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutos
+const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutos
+
+interface UsageState {
+  windowStart: number | null;
+  cooldownUntil: number | null;
+}
+
+const loadUsageState = (): UsageState => {
+  if (typeof window === "undefined") {
+    return { windowStart: null, cooldownUntil: null };
+  }
+
+  try {
+    const raw = window.localStorage.getItem(USAGE_STORAGE_KEY);
+    if (!raw) {
+      return { windowStart: null, cooldownUntil: null };
+    }
+    const parsed = JSON.parse(raw) as UsageState;
+    return {
+      windowStart:
+        parsed && typeof parsed.windowStart === "number"
+          ? parsed.windowStart
+          : null,
+      cooldownUntil:
+        parsed && typeof parsed.cooldownUntil === "number"
+          ? parsed.cooldownUntil
+          : null,
+    };
+  } catch {
+    return { windowStart: null, cooldownUntil: null };
+  }
+};
+
+const saveUsageState = (state: UsageState) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(USAGE_STORAGE_KEY, JSON.stringify(state));
+};
+
+interface UsageEvaluation {
+  allowed: boolean;
+  updatedState: UsageState;
+  remainingMs?: number;
+}
+
+const evaluateUsage = (now: number, prevState: UsageState): UsageEvaluation => {
+  let state = { ...prevState };
+
+  // Si el cooldown ha expirado, reseteamos
+  if (state.cooldownUntil && now >= state.cooldownUntil) {
+    state = { windowStart: null, cooldownUntil: null };
+  }
+
+  // Cooldown activo
+  if (state.cooldownUntil && now < state.cooldownUntil) {
+    return {
+      allowed: false,
+      updatedState: state,
+      remainingMs: state.cooldownUntil - now,
+    };
+  }
+
+  // Ventana de uso activa
+  if (state.windowStart) {
+    const elapsed = now - state.windowStart;
+
+    if (elapsed <= USAGE_WINDOW_MS) {
+      const remainingMs = state.windowStart + USAGE_WINDOW_MS - now;
+      return {
+        allowed: true,
+        updatedState: state,
+        remainingMs,
+      };
+    }
+
+    // Ventana agotada → iniciamos cooldown
+    const cooldownUntil = now + COOLDOWN_MS;
+    const newState: UsageState = {
+      windowStart: null,
+      cooldownUntil,
+    };
+
+    return {
+      allowed: false,
+      updatedState: newState,
+      remainingMs: cooldownUntil - now,
+    };
+  }
+
+  // Sin ventana ni cooldown → iniciamos ventana
+  const newState: UsageState = {
+    windowStart: now,
+    cooldownUntil: null,
+  };
+
+  return {
+    allowed: true,
+    updatedState: newState,
+    remainingMs: USAGE_WINDOW_MS,
+  };
+};
+
+interface UsageView {
+  mode: UsageMode;
+  remainingMs: number | null;
+}
+
+const computeUsageView = (now: number, state: UsageState): UsageView => {
+  if (state.cooldownUntil && now < state.cooldownUntil) {
+    return {
+      mode: "cooldown",
+      remainingMs: state.cooldownUntil - now,
+    };
+  }
+
+  if (state.windowStart) {
+    const elapsed = now - state.windowStart;
+    if (elapsed <= USAGE_WINDOW_MS) {
+      return {
+        mode: "active",
+        remainingMs: state.windowStart + USAGE_WINDOW_MS - now,
+      };
+    }
+  }
+
+  return {
+    mode: "idle",
+    remainingMs: null,
+  };
+};
+
 export const ChatProvider = ({ children }: ChatProviderProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<
@@ -71,9 +209,11 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
 
+  const [usageMode, setUsageMode] = useState<UsageMode>("idle");
+  const [usageRemainingMs, setUsageRemainingMs] = useState<number | null>(null);
+
   const reloadConversations = async () => {
     if (IS_EPHEMERAL) {
-      // Modo sin auth: no hay conversaciones persistentes
       return;
     }
 
@@ -90,10 +230,10 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     }
   };
 
+  // Inicialización: cargar conversaciones y seleccionar la adecuada
   useEffect(() => {
     const init = async () => {
       if (IS_EPHEMERAL) {
-        // Sin auth → no tocar backend de conversaciones
         setConversations([]);
         setSelectedConversationId(null);
         setMessages([]);
@@ -105,14 +245,35 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
           SELECTED_CONVERSATION_STORAGE_KEY
         );
 
-        await reloadConversations();
+        setLoadingConversations(true);
+        const data = await conversationService.getConversations();
+        setConversations(data);
+        setLoadingConversations(false);
 
-        if (storedId) {
-          setSelectedConversationId(storedId);
+        if (!data || data.length === 0) {
+          setSelectedConversationId(null);
+          setMessages([]);
+          return;
+        }
+
+        // 1) Intentamos usar la conversación almacenada
+        let conversationIdToLoad: string | null = null;
+
+        if (storedId && data.some((c) => c.id === storedId)) {
+          conversationIdToLoad = storedId;
+        } else {
+          // 2) Si no existe o no coincide, usamos la última conversación
+          conversationIdToLoad = data[data.length - 1].id;
+        }
+
+        if (conversationIdToLoad) {
+          setSelectedConversationId(conversationIdToLoad);
           setLoadingMessages(true);
           try {
             const detail =
-              await conversationService.getConversationWithMessages(storedId);
+              await conversationService.getConversationWithMessages(
+                conversationIdToLoad
+              );
 
             const sortedMessages = [...detail.messages].sort(
               (a, b) =>
@@ -122,15 +283,12 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
 
             setMessages(sortedMessages);
           } catch (e) {
-            // ⚠️ Importante: NO borramos la clave de localStorage aquí
             console.error(
-              "[ChatContext] No se ha podido cargar la conversación almacenada",
+              "[ChatContext] No se ha podido cargar la conversación inicial",
               e
             );
-            // Podemos dejar selectedConversationId tal cual o ponerlo a null,
-            // pero sin tocar localStorage. Para evitar estados raros, lo
-            // dejamos a null:
             setSelectedConversationId(null);
+            setMessages([]);
           } finally {
             setLoadingMessages(false);
           }
@@ -138,13 +296,30 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       } catch (e) {
         console.error(e);
         setError("No se han podido cargar las conversaciones.");
+        setLoadingConversations(false);
       }
     };
 
     void init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Actualizar contador de uso cada 30s
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const update = () => {
+      const state = loadUsageState();
+      const { mode, remainingMs } = computeUsageView(Date.now(), state);
+      setUsageMode(mode);
+      setUsageRemainingMs(remainingMs ?? null);
+    };
+
+    update();
+    const id = window.setInterval(update, 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Persistir conversación seleccionada
   useEffect(() => {
     if (IS_EPHEMERAL) return;
 
@@ -162,7 +337,6 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     setError("");
 
     if (IS_EPHEMERAL) {
-      // Modo none: ignoramos selección (todo es efímero)
       return;
     }
 
@@ -202,30 +376,53 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    const now = new Date().toISOString();
+    const now = Date.now();
+    const currentUsageState = loadUsageState();
+    const { allowed, updatedState, remainingMs } = evaluateUsage(
+      now,
+      currentUsageState
+    );
+    saveUsageState(updatedState);
+
+    const view = computeUsageView(now, updatedState);
+    setUsageMode(view.mode);
+    setUsageRemainingMs(view.remainingMs ?? null);
+
+    if (!allowed) {
+      const remaining =
+        remainingMs != null ? remainingMs : view.remainingMs ?? COOLDOWN_MS;
+      const remainingMinutes = Math.max(1, Math.ceil(remaining / 60000));
+
+      setError(
+        `Has alcanzado el tiempo máximo de uso del asistente. ` +
+          `Podrás volver a utilizarlo en aproximadamente ${remainingMinutes} minutos.`
+      );
+      return;
+    }
+
+    const nowIso = new Date(now).toISOString();
     const currentConversationId = IS_EPHEMERAL
       ? undefined
       : selectedConversationId ?? undefined;
 
     const userMessage: ChatMessage = {
-      id: `${now}-user`,
+      id: `${nowIso}-user`,
       role: "user",
       content: trimmed,
-      createdAt: now,
+      createdAt: nowIso,
       conversationId: currentConversationId,
       attachments,
     };
 
-    const assistantId = `${now}-assistant`;
+    const assistantId = `${nowIso}-assistant`;
     const assistantBase: ChatMessage = {
       id: assistantId,
       role: "assistant",
       content: "",
-      createdAt: now,
+      createdAt: nowIso,
       conversationId: currentConversationId,
     };
 
-    // Usuario + placeholder del bot
     setMessages((prev) => [...prev, userMessage, assistantBase]);
     setError("");
     setIsStreaming(true);
@@ -296,7 +493,6 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
 
   const createConversation = async (title: string) => {
     if (IS_EPHEMERAL) {
-      // Sin auth → no creamos conversaciones en BBDD
       return;
     }
 
@@ -321,7 +517,6 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
 
   const deleteConversation = async (id: string) => {
     if (IS_EPHEMERAL) {
-      // Sin auth → nada que borrar en backend
       return;
     }
 
@@ -380,6 +575,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       loadingMessages,
       isStreaming,
       error,
+      usageMode,
+      usageRemainingMs,
       reloadConversations,
       selectConversation,
       sendMessage,
@@ -394,6 +591,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       loadingMessages,
       isStreaming,
       error,
+      usageMode,
+      usageRemainingMs,
     ]
   );
 

@@ -10,6 +10,11 @@ import { useChatContext } from "../../../infrastructure/contexts";
 import { useUploadManager } from "../../../infrastructure/hooks/useUploadManager";
 import type { ChatAttachment } from "../../../interfaces";
 
+// Helper para leer el modo de auth desde entorno
+const getAuthMode = (): string => {
+  return import.meta.env.VITE_CHAT_AUTH_MODE ?? "";
+};
+
 export const Chatbot = () => {
   const { t } = useTranslation("common");
 
@@ -47,7 +52,7 @@ export const Chatbot = () => {
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
-    if (isUploading) return; // opcional: bloquear enviar mientras sube
+    if (isUploading) return; // bloqueamos enviar mientras sube
 
     setInput("");
 
@@ -76,16 +81,22 @@ export const Chatbot = () => {
     event.target.value = "";
   };
 
+  // Flag para mostrar u ocultar la lista de conversaciones
+  const authMode = getAuthMode();
+  const showConversationsList = authMode !== "none";
+
   return (
     <div className="ia-chatbot-content">
-      <ConversationsList
-        conversations={conversations}
-        selectedConversationId={selectedConversationId}
-        loading={loadingConversations}
-        onChange={selectConversation}
-        onCreateConversation={createConversation}
-        onDeleteConversation={deleteConversation}
-      />
+      {showConversationsList && (
+        <ConversationsList
+          conversations={conversations}
+          selectedConversationId={selectedConversationId}
+          loading={loadingConversations}
+          onChange={selectConversation}
+          onCreateConversation={createConversation}
+          onDeleteConversation={deleteConversation}
+        />
+      )}
 
       <div className="ia-chatbot-messages">
         {messages.map((msg) =>

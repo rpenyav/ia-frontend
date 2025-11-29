@@ -147,4 +147,4 @@ El objetivo es que el cliente pueda incrustar el chatbot en **cualquier web** (D
 
 En resumen:
 
-- Para cargar el chatbot en **Drupal, WordPress o cualquier website**, basta con **exponer el `dist/index.js`** (o el nombre de bundle que se use) y **llamarlo desde el `index.html`** (o plantilla principal) con una etiqueta `<script>`.
+- Para cargar el chatbot en **Drupal, WordPress o cualquier website**, basta con **exponer el `dist/index.js`** (o el nombre de bundle que se use) y **llamarlo desde el `index.html`** (o plantilla principal) con una etiqueta `<script>`. 
