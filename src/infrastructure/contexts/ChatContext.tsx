@@ -26,6 +26,8 @@ const conversationService = new ConversationService(conversationRepository);
 const chatService = new ChatService(chatRepository);
 
 const IS_EPHEMERAL = isAuthModeNone;
+// Nuevo: flag de restricción por entorno
+const IS_RESTRICTED = import.meta.env.VITE_CHATBOT_RESTRICTED === "true";
 
 type UsageMode = "idle" | "active" | "cooldown";
 
@@ -303,8 +305,24 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     void init();
   }, []);
 
-  // Actualizar contador de uso cada 30s
+  // Actualizar contador de uso cada 30s (solo si está restringido)
   useEffect(() => {
+    if (!IS_RESTRICTED) {
+      // Modo libre: nos aseguramos de que el estado quede "limpio"
+      setUsageMode("idle");
+      setUsageRemainingMs(null);
+
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.removeItem(USAGE_STORAGE_KEY);
+        } catch {
+          // ignoramos errores de storage
+        }
+      }
+
+      return;
+    }
+
     if (typeof window === "undefined") return;
 
     const update = () => {
@@ -376,31 +394,38 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    const now = Date.now();
-    const currentUsageState = loadUsageState();
-    const { allowed, updatedState, remainingMs } = evaluateUsage(
-      now,
-      currentUsageState
-    );
-    saveUsageState(updatedState);
-
-    const view = computeUsageView(now, updatedState);
-    setUsageMode(view.mode);
-    setUsageRemainingMs(view.remainingMs ?? null);
-
-    if (!allowed) {
-      const remaining =
-        remainingMs != null ? remainingMs : view.remainingMs ?? COOLDOWN_MS;
-      const remainingMinutes = Math.max(1, Math.ceil(remaining / 60000));
-
-      setError(
-        `Has alcanzado el tiempo máximo de uso del asistente. ` +
-          `Podrás volver a utilizarlo en aproximadamente ${remainingMinutes} minutos.`
+    // --- LÓGICA DE USO SOLO SI ESTÁ RESTRINGIDO ---
+    if (IS_RESTRICTED) {
+      const now = Date.now();
+      const currentUsageState = loadUsageState();
+      const { allowed, updatedState, remainingMs } = evaluateUsage(
+        now,
+        currentUsageState
       );
-      return;
+      saveUsageState(updatedState);
+
+      const view = computeUsageView(now, updatedState);
+      setUsageMode(view.mode);
+      setUsageRemainingMs(view.remainingMs ?? null);
+
+      if (!allowed) {
+        const remaining =
+          remainingMs != null ? remainingMs : view.remainingMs ?? COOLDOWN_MS;
+        const remainingMinutes = Math.max(1, Math.ceil(remaining / 60000));
+
+        setError(
+          `Has alcanzado el tiempo máximo de uso del asistente. ` +
+            `Podrás volver a utilizarlo en aproximadamente ${remainingMinutes} minutos.`
+        );
+        return;
+      }
+    } else {
+      // Modo libre: aseguramos estado "idle"
+      setUsageMode("idle");
+      setUsageRemainingMs(null);
     }
 
-    const nowIso = new Date(now).toISOString();
+    const nowIso = new Date().toISOString();
     const currentConversationId = IS_EPHEMERAL
       ? undefined
       : selectedConversationId ?? undefined;

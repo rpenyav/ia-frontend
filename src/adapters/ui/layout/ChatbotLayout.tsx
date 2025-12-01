@@ -34,6 +34,11 @@ const getEnvCaptchaFlag = (): boolean => {
   return import.meta.env.VITE_CAPTCHA === "true";
 };
 
+/** Nuevo: flag de si el chatbot está restringido por tiempo/uso */
+const getEnvChatbotRestrictedFlag = (): boolean => {
+  return import.meta.env.VITE_CHATBOT_RESTRICTED === "true";
+};
+
 const ChatbotLayout = ({
   children,
   onLogout,
@@ -263,6 +268,8 @@ const ChatbotLayout = ({
     }
   }, [showCaptchaLayer]);
 
+  const isRestricted = getEnvChatbotRestrictedFlag();
+
   return (
     <div className="ia-chatbot-root">
       {/* Burbuja flotante */}
@@ -366,8 +373,8 @@ const ChatbotLayout = ({
             onChangeLanguage={handleHeaderChangeLanguage}
           />
 
-          {/* Slot opcional para el badge de uso */}
-          {usageBadgeSlot && (
+          {/* Slot opcional para el badge de uso – SOLO si el modo restringido está activo */}
+          {isRestricted && usageBadgeSlot && (
             <div className="ia-chatbot-usage-wrapper">{usageBadgeSlot}</div>
           )}
 
