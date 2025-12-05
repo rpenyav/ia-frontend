@@ -5,7 +5,7 @@
 .ia-chatbot-root {
   position: fixed;
   inset: 0;
-  pointer-events: none; // deja pasar eventos salvo en panel / bubble-wrapper
+  pointer-events: none; /* deja pasar eventos salvo en panel / bubble-wrapper */
   z-index: 9990;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -332,7 +332,7 @@
 }
 
 .ia-chatbot-message-row {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem; /* compacto */
   display: flex;
 }
 
@@ -360,9 +360,14 @@
   border-color: transparent;
 }
 
+/* Burbuja del bot: estilo “card” suave */
 .ia-chatbot-message-bubble.assistant {
-  background-color: var(--ia-bot-bubble-bg, #ffffff);
-  color: var(--ia-bot-bubble-text, #111827);
+  background: #f5f5f7;
+  border-radius: 16px;
+  padding: 10px 12px;
+  max-width: 90%;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 /* ===================
@@ -629,7 +634,6 @@
    BURBUJA + BOCADILLO
    ======================= */
 
-/* Wrapper fijo abajo-derecha para burbuja + bocadillo */
 .ia-chatbot-bubble-wrapper {
   position: fixed;
   right: 24px;
@@ -643,27 +647,21 @@
 }
 
 /* Bocadillo tipo cómic encima de la burbuja */
-/* Bocadillo tipo cómic encima de la burbuja */
-/* Bocadillo tipo cómic */
 
-/* HTML: <div class="tooltip">This is a Speech Bubble with a solid coloration and with border radius </div> */
-.ia-chatbot-bubble-tooltip {
-  color: #fff;
-  font-size: 18px;
-  max-width: 28ch;
-
-  text-align: center;
-}
 .ia-chatbot-bubble-tooltip {
   position: relative;
   right: 80px;
+  max-width: 28ch;
+  padding: 1em;
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+
   /* triangle dimension */
-  --b: 0.8em; /* control the base */
-  --h: 0.4em; /* control the height */
-  z-index: 100;
+  --b: 0.8em; /* base */
+  --h: 0.4em; /* altura */
   --c: #acacac;
 
-  padding: 1em;
   border-radius: 1em;
   border-bottom-right-radius: 0;
 
@@ -676,52 +674,26 @@
     100% calc(100% - var(--b))
   );
   background: var(--c);
-  border-image: conic-gradient(var(--c) 0 0) 0 999 999 0/ 0 calc(
-      var(--h) + var(--b)
-    ) calc(var(--h) + var(--b)) 0/0 var(--h) var(--h) 0;
+  border-image: conic-gradient(var(--c) 0 0) 0 999 999 0 / 0
+    calc(var(--h) + var(--b)) calc(var(--h) + var(--b)) 0 / 0 var(--h) var(--h)
+    0;
 }
 
 /* Flecha del bocadillo apuntando a la burbuja */
 .ia-chatbot-bubble-tooltip::after {
   content: "";
   position: absolute;
-  right: 28px; /* ajusta la horizontal hasta que te guste */
-  bottom: -10px; /* más abajo para que se vea completa */
-  width: 14px;
-  height: 14px;
-  background: #ffffff;
-  transform: rotate(45deg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-// .ia-chatbot-bubble-tooltip {
-//   position: relative;
-//   right: 80px; /* lo desplaza hacia la izquierda */
-//   max-width: 28ch;
-//   padding: 0.9em 1.4em;
-
-//   background: #acacac; /* color del bocadillo */
-//   color: #ffffff;
-//   font-size: 14px;
-//   text-align: center;
-
-//   border-radius: 999px; /* forma de píldora */
-// }
-
-/* Flecha del bocadillo apuntando a la burbuja */
-.ia-chatbot-bubble-tooltip::after {
-  content: "";
-  position: absolute;
-  right: 24px; /* ajusta horizontal si quieres mover la flecha */
-  bottom: -6px; /* cuánto sobresale hacia la burbuja */
+  right: 24px;
+  bottom: -6px;
   width: 12px;
   height: 12px;
-  background: #acacac; /* mismo color que el bocadillo */
+  background: #acacac;
   transform: rotate(45deg);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
 }
 
 /* Burbuja circular del chatbot */
+
 .ia-chatbot-bubble {
   width: 64px;
   height: 64px;
@@ -735,7 +707,7 @@
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
   transition: transform 0.16s ease-out, box-shadow 0.16s ease-out;
   color: #ffffff;
-  z-index: 1; /* por debajo del bocadillo */
+  z-index: 1;
 }
 
 .ia-chatbot-bubble:hover {
@@ -822,13 +794,14 @@
   color: #ffffff;
 }
 
-/* p.ej. en ia-chatbot.css */
+/* ======================
+   BADGE DE USO / LIMITE
+   ====================== */
 
 .ia-chatbot-usage-wrapper {
   padding: 4px 16px 0;
 }
 
-/* Reutilizamos las clases del badge que te pasé antes */
 .ia-chatbot-usage-badge {
   display: inline-flex;
   align-items: center;
@@ -862,4 +835,177 @@
 
 .ia-chatbot-usage-badge__text {
   white-space: nowrap;
+}
+
+/* =======================
+   UTILIDADES TEXTO / MARKDOWN
+   ======================= */
+
+/* Imagen suelta en markdown */
+.iachat-product-image {
+  max-width: 100%;
+  border-radius: 8px;
+  margin-top: 8px;
+  display: block;
+}
+
+/* Párrafos compactos */
+.iachat-text-paragraph {
+  margin-top: 0;
+  margin-bottom: 2px;
+}
+
+/* Heading compacto */
+.iachat-heading {
+  margin-top: 0;
+  margin-bottom: 2px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Listas de especificaciones genéricas */
+.iachat-spec-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.iachat-spec-list-item {
+  margin: 0;
+  padding-left: 12px;
+  position: relative;
+  line-height: 1.1;
+}
+
+.iachat-spec-list-item + .iachat-spec-list-item {
+  margin-top: 1px;
+}
+
+.iachat-spec-list-item::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 10px;
+  color: #555;
+}
+
+/* Por si ReactMarkdown mete <p> dentro del <li> */
+.iachat-spec-list-item > p {
+  margin: 0;
+}
+
+/* Negritas del markdown */
+.iachat-strong {
+  font-weight: 600;
+}
+
+/* Card de imagen simple (otra vista distinta a la de catálogo) */
+.iachat-product-card-inline {
+  display: block;
+  margin-top: 6px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: #fff;
+}
+
+.iachat-product-card-image {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+}
+
+/* Enlaces genéricos del chatbot */
+.iachat-link {
+  color: #0f62fe;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+/* =========================
+   CARD DE COCHE (CATÁLOGO)
+   ========================= */
+
+.iachat-car-card {
+  display: block;
+}
+
+.iachat-car-card-intro {
+  margin: 0 0 8px;
+  font-size: 0.86rem;
+}
+
+/* fila principal: imagen izquierda, texto derecha */
+.iachat-car-card-body {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: flex-start;
+}
+
+/* columna izquierda: foto + botón */
+.iachat-car-card-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.iachat-car-card-image {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+/* enlace "Ficha del vehículo" */
+.iachat-car-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background-color: #ffffff;
+  font-size: 0.8rem;
+  color: #111827;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.16);
+}
+
+.iachat-car-card-link:hover {
+  background-color: #f3f4f6;
+}
+
+.iachat-car-card-link-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+/* columna derecha: título + lista */
+.iachat-car-card-right {
+  font-size: 0.86rem;
+}
+
+.iachat-car-card-title {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* lista de specs compacta */
+.iachat-car-card-list {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.iachat-car-card-list li {
+  margin: 0 0 2px;
 }
