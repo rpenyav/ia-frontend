@@ -1,10 +1,10 @@
-// src/adapters/ui/react/chat/ChatbotLayout.tsx
 import {
   useEffect,
   useState,
   useRef,
   type ReactNode,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
 } from "react";
 import ChatbotHeader from "./ChatbotHeader";
 import { getChatTheme } from "../../../core/domain/constants/chatTheme";
@@ -25,6 +25,7 @@ export interface ChatbotLayoutProps {
 }
 
 const WIDGET_OPEN_STORAGE_KEY = "ia_chat_widget_open";
+const PANEL_WIDE_STORAGE_KEY = "ia_chat_panel_is_wide";
 
 const getEnvChatbotOpenedFlag = (): boolean => {
   return import.meta.env.VITE_CHATBOT_OPENED === "true";
@@ -49,6 +50,10 @@ const ChatbotLayout = ({
 }: ChatbotLayoutProps) => {
   const theme = getChatTheme();
 
+  /* ======================
+     IDIOMA
+     ====================== */
+
   const [internalLanguage, setInternalLanguage] = useState<string>(() =>
     getInitialLanguage()
   );
@@ -58,6 +63,10 @@ const ChatbotLayout = ({
     void i18n.changeLanguage(effectiveLanguage);
     persistLanguage(effectiveLanguage);
   }, [effectiveLanguage]);
+
+  /* ======================
+     ESTADO OPEN / CLOSE
+     ====================== */
 
   const [isOpen, setIsOpen] = useState<boolean>(() => {
     const envOpened = getEnvChatbotOpenedFlag();
@@ -75,13 +84,20 @@ const ChatbotLayout = ({
     return false;
   });
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(WIDGET_OPEN_STORAGE_KEY, String(isOpen));
+  }, [isOpen]);
+
+  /* ======================
+     CAPTCHA
+     ====================== */
+
   const [showCaptchaLayer, setShowCaptchaLayer] = useState<boolean>(false);
   const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [captchaLoading, setCaptchaLoading] = useState<boolean>(false);
 
-  // contenedor donde pintaremos el widget
   const captchaContainerRef = useRef<HTMLDivElement | null>(null);
-  // id del widget recaptcha (lo devuelve grecaptcha.render)
   const captchaWidgetIdRef = useRef<number | null>(null);
 
   const resetCaptcha = () => {
@@ -92,20 +108,12 @@ const ChatbotLayout = ({
         typeof grecaptcha.reset === "function" &&
         captchaWidgetIdRef.current !== null
       ) {
-        // Resetea el widget en Google
         grecaptcha.reset(captchaWidgetIdRef.current);
       }
     }
-    // Olvidamos el id del widget para poder re-renderizarlo la próxima vez
     captchaWidgetIdRef.current = null;
   };
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(WIDGET_OPEN_STORAGE_KEY, String(isOpen));
-  }, [isOpen]);
-
-  // Cuando se muestra la capa, intentamos renderizar el captcha
   useEffect(() => {
     if (!showCaptchaLayer) return;
 
@@ -124,7 +132,6 @@ const ChatbotLayout = ({
 
       const grecaptcha = (window as any).grecaptcha;
       if (!grecaptcha || typeof grecaptcha.render !== "function") {
-        // Script todavía no cargado, reintentamos en un momento
         setTimeout(tryRender, 300);
         return;
       }
@@ -135,7 +142,6 @@ const ChatbotLayout = ({
       }
 
       if (captchaWidgetIdRef.current !== null) {
-        // ya renderizado
         return;
       }
 
@@ -146,7 +152,6 @@ const ChatbotLayout = ({
             setCaptchaError(null);
           },
           "expired-callback": () => {
-            // Se ha caducado, obligamos a marcar de nuevo
             captchaWidgetIdRef.current = null;
           },
           "error-callback": () => {
@@ -238,6 +243,10 @@ const ChatbotLayout = ({
     }, 300);
   };
 
+  /* ======================
+     IDIOMA (header)
+     ====================== */
+
   const handleHeaderChangeLanguage = (lang: string) => {
     if (!currentLanguage) {
       setInternalLanguage(lang);
@@ -246,6 +255,10 @@ const ChatbotLayout = ({
       onChangeLanguage(lang);
     }
   };
+
+  /* ======================
+     THEME -> CSS VARS
+     ====================== */
 
   const cssVars: CSSProperties = {
     "--ia-header-bg-from": theme.colors.headerBgFrom,
@@ -269,6 +282,108 @@ const ChatbotLayout = ({
   }, [showCaptchaLayer]);
 
   const isRestricted = getEnvChatbotRestrictedFlag();
+
+  /* ======================
+     EXPANSIÓN DE ANCHO
+     ====================== */
+
+  const basePanelWidth = theme.panel.width ?? "420px";
+  const expandedPanelWidth = "800px";
+
+  const [isWide, setIsWide] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(PANEL_WIDE_STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleWidth = () => {
+    setIsWide((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(PANEL_WIDE_STORAGE_KEY, String(next));
+        } catch {
+          // ignore
+        }
+      }
+      return next;
+    });
+  };
+
+  const panelWidth = isWide ? expandedPanelWidth : basePanelWidth;
+
+  /* ======================
+     DRAG DEL PANEL
+     ====================== */
+
+  const [panelPosition, setPanelPosition] = useState<{
+    bottom: number;
+    right: number;
+  }>({
+    bottom: 20,
+    right: 24,
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{
+    mouseX: number;
+    mouseY: number;
+    bottom: number;
+    right: number;
+  } | null>(null);
+
+  const handleHeaderDragStart = (e: ReactMouseEvent<HTMLDivElement>) => {
+    // Solo botón izquierdo
+    if (e.button !== 0) return;
+    e.preventDefault();
+
+    dragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      bottom: panelPosition.bottom,
+      right: panelPosition.right,
+    };
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const start = dragStartRef.current;
+      if (!start) return;
+
+      const deltaX = event.clientX - start.mouseX;
+      const deltaY = event.clientY - start.mouseY;
+
+      // Movemos el panel dentro de la ventana (clamp muy simple)
+      const newBottom = Math.max(8, start.bottom - deltaY);
+      const newRight = Math.max(8, start.right - deltaX);
+
+      setPanelPosition({
+        bottom: newBottom,
+        right: newRight,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
+
+  /* ======================
+     RENDER
+     ====================== */
 
   return (
     <div className="ia-chatbot-root">
@@ -358,10 +473,12 @@ const ChatbotLayout = ({
           className="ia-chatbot-panel"
           style={{
             ...cssVars,
-            width: theme.panel.width,
+            width: panelWidth,
             height: theme.panel.height,
             borderRadius: theme.panel.borderRadius,
             boxShadow: theme.panel.shadow,
+            right: panelPosition.right,
+            bottom: panelPosition.bottom,
           }}
         >
           <ChatbotHeader
@@ -371,6 +488,9 @@ const ChatbotLayout = ({
             showLogout={showLogout}
             currentLanguage={effectiveLanguage}
             onChangeLanguage={handleHeaderChangeLanguage}
+            isWide={isWide}
+            onToggleWidth={handleToggleWidth}
+            onDragStart={handleHeaderDragStart}
           />
 
           {/* Slot opcional para el badge de uso – SOLO si el modo restringido está activo */}

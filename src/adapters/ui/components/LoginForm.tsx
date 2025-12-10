@@ -19,7 +19,7 @@ export const LoginForm = () => {
     <div className="iachat-login-container">
       <form className="iachat-login-form" onSubmit={handleSubmit}>
         <div className="iachat-login-header">
-          <div className="iachat-login-avatar">🤖</div>
+          {/* <div className="iachat-login-avatar">🤖</div> */}
           <div className="iachat-login-header-text">
             <h2 className="iachat-login-title">{t("login_title")}</h2>
             <p className="iachat-login-subtitle">{t("login_subtitle")}</p>
@@ -27,9 +27,9 @@ export const LoginForm = () => {
         </div>
 
         <div className="iachat-login-field">
-          <label htmlFor="iachat-email" className="iachat-login-label">
+          {/* <label htmlFor="iachat-email" className="iachat-login-label">
             {t("login_email_label")}
-          </label>
+          </label> */}
           <input
             id="iachat-email"
             className="iachat-login-input"
@@ -43,9 +43,9 @@ export const LoginForm = () => {
         </div>
 
         <div className="iachat-login-field">
-          <label htmlFor="iachat-password" className="iachat-login-label">
+          {/* <label htmlFor="iachat-password" className="iachat-login-label">
             {t("login_password_label")}
-          </label>
+          </label> */}
           <input
             id="iachat-password"
             className="iachat-login-input"

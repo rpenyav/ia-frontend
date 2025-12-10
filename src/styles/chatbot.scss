@@ -1,3 +1,4 @@
+// chatbot.scss
 /* =========================
    ROOT / CONTENEDOR GENERAL
    ========================= */
@@ -32,6 +33,42 @@
   background-color: #ffffff;
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.45);
   overflow: hidden;
+
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out,
+    width 0.2s ease-out, height 0.2s ease-out;
+}
+
+/* Estados de animación de entrada/salida */
+.ia-chatbot-panel--enter {
+  animation: iachat-panel-enter 0.2s ease-out forwards;
+}
+
+.ia-chatbot-panel--exit {
+  animation: iachat-panel-exit 0.18s ease-in forwards;
+}
+
+@keyframes iachat-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes iachat-panel-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
 }
 
 /* Ajuste responsive */
@@ -52,20 +89,58 @@
   padding: 0.75rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
+  flex-direction: column; // antes era row
+  justify-content: flex-start;
+  align-items: stretch;
+
+  position: relative; // ⬅️ importante para el ::before
+  background-color: rgba(0, 143, 200, 1); // color de fondo base
+  color: var(--ia-header-text, #ffffff);
+  overflow: visible;
+}
+
+.ia-chatbot-header::before {
+  content: "";
+  position: absolute;
+  inset: 0; // ocupa todo el header
+  background: url("/cenefa.svg") no-repeat;
+  background-size: 140% auto;
+  background-position: 30% 120%;
+  opacity: 0.5; // ⬅️ aquí la magia
+  pointer-events: none; // que no bloquee clicks
+  z-index: 0;
+}
+
+/* Asegúrate de que el contenido quede por encima */
+.ia-chatbot-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Fila superior: logo + acciones */
+.ia-chatbot-header-top {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(
-    135deg,
-    var(--ia-header-bg-from, rgba(37, 99, 235, 0.96)),
-    var(--ia-header-bg-to, rgba(56, 189, 248, 0.96))
-  );
-  color: var(--ia-header-text, #ffffff);
+}
+
+/* solo cuando NO estamos loggeados (misma lógica que la anim de altura) */
+.ia-chatbot-header--expanded,
+.ia-chatbot-header--intro {
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+}
+
+/* opcional, por claridad: header compacto (logged) sin esquinas */
+.ia-chatbot-header--compact {
+  border-radius: 0;
 }
 
 .ia-chatbot-header-left {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  cursor: move; /* indica que se puede arrastrar */
 }
 
 .ia-chatbot-header-title {
@@ -145,7 +220,7 @@
   display: block;
 }
 
-/* Grupo de acciones (settings + minimizar) */
+/* Grupo de acciones (settings + minimizar + expandir panel) */
 .ia-chatbot-header-actions {
   position: relative;
   display: flex;
@@ -153,7 +228,7 @@
   gap: 0.25rem;
 }
 
-/* Botón de settings */
+/* Botón de settings / expand / minimize */
 .ia-chatbot-header-settings-button {
   border: none;
   background: transparent;
@@ -332,7 +407,7 @@
 }
 
 .ia-chatbot-message-row {
-  margin-bottom: 0.35rem; /* compacto */
+  margin-bottom: 0.35rem;
   display: flex;
 }
 
@@ -348,22 +423,24 @@
   max-width: 80%;
   padding: 0.5rem 0.75rem;
   border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
+  // border: 1px solid #d3d3d3;
   font-size: 0.875rem;
   line-height: 1.4;
   white-space: pre-wrap;
+  margin-block: 10px;
 }
 
 .ia-chatbot-message-bubble.user {
-  background-color: var(--ia-user-bubble-bg, #2563eb);
-  color: var(--ia-user-bubble-text, #ffffff);
+  background-color: rgb(0, 132, 190);
+  color: #ffffff;
   border-color: transparent;
 }
 
-/* Burbuja del bot: estilo “card” suave */
+/* Burbuja del bot: estilo card suave */
 .ia-chatbot-message-bubble.assistant {
-  background: #f5f5f7;
+  background-color: transparent;
   border-radius: 16px;
+  color: #6d6d6d;
   padding: 10px 12px;
   max-width: 90%;
   font-size: 14px;
@@ -374,25 +451,62 @@
    INPUT / TOOLBAR INFERIOR
    =================== */
 
-.ia-chatbot-input-wrapper {
-  border-top: 1px solid #e5e7eb;
-  padding: 0.5rem;
-  display: flex;
-  gap: 0.5rem;
-  background-color: var(--ia-input-bg, #ffffff);
-  position: relative;
-  z-index: 1;
+/* Clip dentro de la pastilla, iconito blanco */
+.ia-chatbot-attach-button {
+  border: none;
+  background-color: transparent;
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.16);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
 }
 
-.ia-chatbot-textarea {
-  flex: 1;
-  resize: none;
-  min-height: 1.5rem;
-  max-height: 6rem;
-  padding: 0.5rem;
-  font-size: 0.875rem;
-  border-radius: 0.5rem;
-  border: 1px solid #d1d5db;
+/* Botón send: círculo blanco pegado al borde derecho */
+.ia-chatbot-send-button {
+  border: none;
+  background-color: #ffffff;
+  color: rgb(0, 143, 200);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.4);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.45);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.35);
+  }
+
+  &:disabled {
+    background-color: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
 }
 
 /* Botones dentro del input */
@@ -405,22 +519,6 @@
   gap: 0.25rem;
 }
 
-.ia-chatbot-attach-button {
-  border: none;
-  background-color: #f3f4f6;
-  color: #111827;
-  border-radius: 999px;
-  padding: 0 0.6rem;
-  margin-right: 0.4rem;
-  width: 44px;
-  height: 44px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-}
-
 .ia-chatbot-attach-button:hover:not(:disabled) {
   background-color: #e5e7eb;
 }
@@ -428,20 +526,6 @@
 .ia-chatbot-attach-button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
-}
-
-.ia-chatbot-send-button {
-  border: none;
-  background-color: #2563eb;
-  color: #ffffff;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  cursor: pointer;
 }
 
 .ia-chatbot-send-button:disabled {
@@ -657,9 +741,8 @@
   font-size: 14px;
   text-align: center;
 
-  /* triangle dimension */
-  --b: 0.8em; /* base */
-  --h: 0.4em; /* altura */
+  --b: 0.8em;
+  --h: 0.4em;
   --c: #acacac;
 
   border-radius: 1em;
@@ -841,7 +924,6 @@
    UTILIDADES TEXTO / MARKDOWN
    ======================= */
 
-/* Imagen suelta en markdown */
 .iachat-product-image {
   max-width: 100%;
   border-radius: 8px;
@@ -849,13 +931,11 @@
   display: block;
 }
 
-/* Párrafos compactos */
 .iachat-text-paragraph {
   margin-top: 0;
   margin-bottom: 2px;
 }
 
-/* Heading compacto */
 .iachat-heading {
   margin-top: 0;
   margin-bottom: 2px;
@@ -863,7 +943,6 @@
   font-size: 0.95rem;
 }
 
-/* Listas de especificaciones genéricas */
 .iachat-spec-list {
   list-style: none;
   margin: 0;
@@ -890,17 +969,14 @@
   color: #555;
 }
 
-/* Por si ReactMarkdown mete <p> dentro del <li> */
 .iachat-spec-list-item > p {
   margin: 0;
 }
 
-/* Negritas del markdown */
 .iachat-strong {
   font-weight: 600;
 }
 
-/* Card de imagen simple (otra vista distinta a la de catálogo) */
 .iachat-product-card-inline {
   display: block;
   margin-top: 6px;
@@ -917,7 +993,6 @@
   object-fit: cover;
 }
 
-/* Enlaces genéricos del chatbot */
 .iachat-link {
   color: #0f62fe;
   font-weight: 500;
@@ -930,6 +1005,14 @@
 
 .iachat-car-card {
   display: block;
+  // margin-left: 40px;
+  // border: 1px solid #c4c4c4;
+  padding: 15px;
+  border-radius: 20px;
+  width: 96%;
+  color: #000;
+  background-color: rgb(217, 231, 201);
+  // background-color: rgb(171, 255, 84);
 }
 
 .iachat-car-card-intro {
@@ -937,7 +1020,6 @@
   font-size: 0.86rem;
 }
 
-/* fila principal: imagen izquierda, texto derecha */
 .iachat-car-card-body {
   display: grid;
   grid-template-columns: 150px minmax(0, 1fr);
@@ -945,7 +1027,6 @@
   align-items: flex-start;
 }
 
-/* columna izquierda: foto + botón */
 .iachat-car-card-left {
   display: flex;
   flex-direction: column;
@@ -955,57 +1036,153 @@
 .iachat-car-card-image {
   display: block;
   width: 100%;
+
   border-radius: 8px;
   object-fit: cover;
 }
 
-/* enlace "Ficha del vehículo" */
+.iachat-link-container {
+  margin-top: 20px;
+  margin-bottom: 6px;
+  width: 100%;
+  display: flex; /* antes inline-flex */
+  justify-content: center; /* centramos el enlace dentro */
+}
+
 .iachat-car-card-link {
   display: inline-flex;
   align-items: center;
+  justify-content: space-between; /* icono + texto centrados entre sí */
   gap: 6px;
+  width: 100%;
+  /* QUITAR margin-right: auto; */
   margin-top: 4px;
   padding: 4px 10px;
   border-radius: 999px;
-  background-color: #ffffff;
+  background-color: #111827;
   font-size: 0.8rem;
-  color: #111827;
+  color: #ffffff;
   text-decoration: none;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.16);
 }
 
 .iachat-car-card-link:hover {
-  background-color: #f3f4f6;
+  background-color: #757576;
 }
 
 .iachat-car-card-link-icon {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid #111827;
+  border: 2px solid #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
 }
 
-/* columna derecha: título + lista */
 .iachat-car-card-right {
   font-size: 0.86rem;
 }
 
 .iachat-car-card-title {
-  margin: 0 0 4px;
-  font-size: 0.95rem;
+  margin: 20px 0 20px;
+  font-size: 1.3rem;
   font-weight: 600;
 }
 
-/* lista de specs compacta */
 .iachat-car-card-list {
-  margin: 0;
+  margin-top: 0;
   padding-left: 16px;
 }
 
 .iachat-car-card-list li {
   margin: 0 0 2px;
+}
+
+.ia-chatbot-panel--enter {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.ia-chatbot-panel--exit {
+  transform: translateY(10px);
+  opacity: 0;
+}
+
+/* ===================
+   INPUT / TOOLBAR INFERIOR
+   =================== */
+
+/* Wrapper = pastilla azul que agrupa input + botones */
+.ia-chatbot-input-wrapper {
+  border-top: none;
+  padding: 0.35rem 0.6rem;
+  display: flex;
+  align-items: center; /* el textarea “apoya” abajo y crece hacia arriba */
+  gap: 0.5rem;
+  background-color: rgb(0, 143, 200); /* azul 0,143,200 */
+  border-radius: 999px;
+  position: relative;
+  z-index: 1;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  margin-left: 15px;
+  margin-right: 15px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
+
+  /* CLAVES */
+  height: auto;
+  flex-shrink: 0; /* que no se colapse al crecer el textarea */
+}
+
+/* Contenedor principal del input (texto + chips) */
+.ia-chatbot-input-main {
+  flex: 1; /* ocupa todo el ancho disponible dentro de la pastilla */
+  /* display por defecto: block, no flex */
+}
+
+/* Textarea integrada, sin caja propia */
+.ia-chatbot-textarea {
+  width: 100%;
+  resize: none;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  /* altura mínima visual */
+  min-height: 38px;
+
+  padding: 10px 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  border-radius: 999px;
+  border: none;
+  background-color: transparent;
+  color: #ffffff;
+  outline: none;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  &:focus {
+    box-shadow: none;
+  }
+}
+
+/* Chips de adjuntos dentro de la pastilla */
+.ia-chatbot-attachments-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.iachat-car-card-image--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #9ad1c1;
+  color: #4b5563;
+  font-size: 0.85rem;
 }

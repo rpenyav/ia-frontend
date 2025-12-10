@@ -1,5 +1,11 @@
 // src/adapters/ui/react/chat/ChatInputArea.tsx
-import type { ChangeEvent, KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 import type { ChatAttachment } from "../../../interfaces";
 import { IconClip, IconSend } from "./icons";
@@ -15,6 +21,14 @@ export interface ChatInputAreaProps {
   isUploadingAttachments: boolean;
 }
 
+const MIN_HEIGHT = 38; // altura mínima
+const MAX_HEIGHT = 180; // tope en px
+
+// radios para los 3 tramos
+const RADIUS_DEFAULT = 999; // pill redonda
+const RADIUS_MEDIUM = 40; // a partir de 50px
+const RADIUS_SMALL = 24; // a partir de 80px
+
 export const ChatInputArea = ({
   value,
   onChange,
@@ -26,18 +40,41 @@ export const ChatInputArea = ({
   isUploadingAttachments,
 }: ChatInputAreaProps) => {
   const { t } = useTranslation("common");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const [textareaHeight, setTextareaHeight] = useState<number>(MIN_HEIGHT);
+
+  const autoResize = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+
+    // reset para medir correctamente
+    el.style.height = "auto";
+
+    const scroll = el.scrollHeight;
+    const next = Math.min(scroll, MAX_HEIGHT);
+    const finalHeight = Math.max(next, MIN_HEIGHT);
+
+    el.style.height = `${finalHeight}px`;
+    el.style.overflowY = scroll > MAX_HEIGHT ? "auto" : "hidden";
+
+    setTextareaHeight(finalHeight);
+  };
 
   const handleTextareaChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(event.target.value);
+    const el = event.target;
+    onChange(el.value);
+    autoResize(el);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
+      // Enter normal: enviar
       event.preventDefault();
       if (!disabled) {
         onSend();
       }
     }
+    // Shift+Enter: salto de línea → el change disparará autoResize
   };
 
   const handleClickSend = () => {
@@ -48,8 +85,31 @@ export const ChatInputArea = ({
 
   const showAttachmentsRow = attachments.length > 0;
 
+  // Al montar
+  useEffect(() => {
+    autoResize(textareaRef.current);
+  }, []);
+
+  // Cuando cambia el valor desde fuera (por ejemplo, se limpia tras enviar)
+  useEffect(() => {
+    autoResize(textareaRef.current);
+  }, [value]);
+
+  // --- lógica de border-radius según altura ---
+  let currentRadius = RADIUS_DEFAULT;
+
+  if (textareaHeight >= 80) {
+    currentRadius = RADIUS_SMALL;
+  } else if (textareaHeight >= 50) {
+    currentRadius = RADIUS_MEDIUM;
+  }
+  // -------------------------------------------
+
   return (
-    <div className="ia-chatbot-input-wrapper">
+    <div
+      className="ia-chatbot-input-wrapper"
+      style={{ borderRadius: currentRadius }}
+    >
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Chips de adjuntos pendientes */}
         {showAttachmentsRow && (
@@ -77,12 +137,14 @@ export const ChatInputArea = ({
 
         {/* Caja de texto */}
         <textarea
+          ref={textareaRef}
           className="ia-chatbot-textarea"
           placeholder={t("chat_input_placeholder")}
           value={value}
           onChange={handleTextareaChange}
           onKeyDown={handleKeyDown}
           disabled={disabled}
+          style={{ borderRadius: currentRadius }}
         />
       </div>
 
@@ -91,11 +153,10 @@ export const ChatInputArea = ({
         type="button"
         className="ia-chatbot-attach-button"
         onClick={onOpenAttachmentsModal}
-        // disabled={disabled}
-        disabled={true}
+        disabled={true} // lo tienes forzado a true
         title={t("chat_input_attach_title")}
       >
-        <IconClip size={18} color={disabled ? "#999999" : "#555555"} />
+        <IconClip size={18} color={disabled ? "#999999" : "#ffffff"} />
         {isUploadingAttachments && (
           <span className="ia-chatbot-attach-badge">...</span>
         )}
@@ -108,7 +169,7 @@ export const ChatInputArea = ({
         onClick={handleClickSend}
         disabled={disabled}
       >
-        <IconSend size={18} color={disabled ? "#ffffff" : "#ffffff"} />
+        <IconSend size={18} color={disabled ? "#ffffff" : "#008fc8"} />
       </button>
     </div>
   );

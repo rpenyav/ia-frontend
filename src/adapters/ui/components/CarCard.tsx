@@ -1,5 +1,5 @@
 // src/adapters/ui/react/chat/CarCard.tsx
-import type { FC } from "react";
+import { useState, type FC } from "react";
 
 export interface CarProduct {
   id: string;
@@ -25,6 +25,9 @@ interface CarCardProps {
   product: CarProduct;
 }
 
+// Opcional: si tienes una imagen de placeholder en assets, pon aquí la ruta
+// const FALLBACK_IMAGE = "/images/car-placeholder.png";
+
 export const CarCard: FC<CarCardProps> = ({ product }) => {
   const {
     brand,
@@ -41,6 +44,8 @@ export const CarCard: FC<CarCardProps> = ({ product }) => {
     mainImage,
     productLink,
   } = product;
+
+  const [hasImageError, setHasImageError] = useState(false);
 
   const fullName = [brand, model, year].filter(Boolean).join(" ");
 
@@ -61,6 +66,8 @@ export const CarCard: FC<CarCardProps> = ({ product }) => {
       ? `${mileage.toLocaleString("es-ES")} km`
       : null;
 
+  const shouldShowFallback = !mainImage || hasImageError;
+
   return (
     <div className="iachat-car-card">
       <p className="iachat-car-card-intro">
@@ -69,34 +76,41 @@ export const CarCard: FC<CarCardProps> = ({ product }) => {
         que podría interesarte.
       </p>
 
-      <div className="iachat-car-card-body">
-        <div className="iachat-car-card-left">
-          {mainImage && (
+      <div className="row">
+        <div className="col-12">
+          {/* Imagen principal si existe y no ha fallado */}
+          {mainImage && !hasImageError && (
             <img
               src={mainImage}
               alt={fullName || "Coche del catálogo"}
               className="iachat-car-card-image"
               loading="lazy"
+              onError={() => {
+                // Si hay error de carga, activamos el fallback
+                setHasImageError(true);
+              }}
             />
           )}
 
-          {productLink && (
-            <a
-              href={productLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="iachat-car-card-link"
-            >
-              <span className="iachat-car-card-link-icon">✓</span>
-              <span>Ficha del vehículo</span>
-            </a>
+          {/* Fallback si no hay mainImage o si ha fallado */}
+          {shouldShowFallback && (
+            // Si quieres usar una imagen real de placeholder, descomenta esto:
+            // <img
+            //   src={FALLBACK_IMAGE}
+            //   alt="Imagen no disponible"
+            //   className="iachat-car-card-image"
+            //   loading="lazy"
+            // />
+            <div className="iachat-car-card-image iachat-car-card-image--fallback">
+              <span>Imagen no disponible</span>
+            </div>
           )}
         </div>
 
-        <div className="iachat-car-card-right">
+        <div className="col-12">
           {fullName && <h3 className="iachat-car-card-title">{fullName}</h3>}
 
-          <ul className="iachat-car-card-list">
+          <ul className="iachat-car-card-list ">
             {formattedPrice && (
               <li>
                 <strong>Precio:</strong> {formattedPrice}
@@ -138,6 +152,20 @@ export const CarCard: FC<CarCardProps> = ({ product }) => {
               </li>
             )}
           </ul>
+
+          {productLink && (
+            <div className="iachat-link-container">
+              <a
+                href={productLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="iachat-car-card-link"
+              >
+                <span className="iachat-car-card-link-icon">✓</span>
+                <span>Ficha del vehículo</span>
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>

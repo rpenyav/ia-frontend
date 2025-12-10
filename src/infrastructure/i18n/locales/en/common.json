@@ -4,7 +4,7 @@
     "login_subtitle": "Access your company's smart assistant.",
     "login_email_label": "Email",
     "login_password_label": "Password",
-    "login_email_placeholder": "test@test.com",
+    "login_email_placeholder": "E-mail",
     "login_password_placeholder": "********",
     "login_button": "Sign in",
     "login_loading": "Connecting...",
