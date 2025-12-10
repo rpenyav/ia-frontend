@@ -57,6 +57,9 @@ const ChatbotHeader = ({
   // 🌊 Estado local de expansión de altura del header
   const [isHeaderExpanded, setIsHeaderExpanded] = useState<boolean>(false);
 
+  // 💬 Tooltip de “arrastra para mover”
+  const [showDragHint, setShowDragHint] = useState<boolean>(false);
+
   // Regla:
   // - Si NO estamos loggeados => expandido (80 → 250 con animación).
   // - Si SÍ estamos loggeados => colapsado (250 → 80 con animación).
@@ -99,6 +102,14 @@ const ChatbotHeader = ({
     }
   };
 
+  const handleDragAreaMouseEnter = () => {
+    setShowDragHint(true);
+  };
+
+  const handleDragAreaMouseLeave = () => {
+    setShowDragHint(false);
+  };
+
   const headerClassName = [
     "ia-chatbot-header",
     isHeaderExpanded ? "ia-chatbot-header--expanded" : "",
@@ -113,12 +124,22 @@ const ChatbotHeader = ({
         <div
           className="ia-chatbot-header-left"
           onMouseDown={handleDragMouseDown}
+          onMouseEnter={handleDragAreaMouseEnter}
+          onMouseLeave={handleDragAreaMouseLeave}
         >
           <div className="ia-chatbot-header-title">
             <span className="ia-chatbot-header-logo">{logoEmoji ?? "🤖"}</span>
             {resolvedTitle}
           </div>
           <div className="ia-chatbot-header-subtitle">{resolvedSubtitle}</div>
+
+          {showDragHint && (
+            <div className="ia-chatbot-header-drag-tooltip">
+              {t("chat_header_drag_hint", {
+                defaultValue: "Arrastra aquí para mover el chatbot",
+              })}
+            </div>
+          )}
         </div>
 
         <div className="ia-chatbot-header-right">

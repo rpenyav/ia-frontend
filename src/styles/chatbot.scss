@@ -92,7 +92,7 @@
   flex-direction: column; // antes era row
   justify-content: flex-start;
   align-items: stretch;
-
+  z-index: 2;
   position: relative; // ⬅️ importante para el ::before
   background-color: rgba(0, 143, 200, 1); // color de fondo base
   color: var(--ia-header-text, #ffffff);
@@ -134,13 +134,6 @@
 /* opcional, por claridad: header compacto (logged) sin esquinas */
 .ia-chatbot-header--compact {
   border-radius: 0;
-}
-
-.ia-chatbot-header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: move; /* indica que se puede arrastrar */
 }
 
 .ia-chatbot-header-title {
@@ -335,6 +328,7 @@
   flex-direction: column;
   background-color: var(--ia-body-bg, #f9fafb);
   min-height: 0;
+  z-index: 1;
 }
 
 .ia-chatbot-content {
@@ -1185,4 +1179,33 @@
   background-color: #9ad1c1;
   color: #4b5563;
   font-size: 0.85rem;
+}
+
+.ia-chatbot-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: move; /* indica que se puede arrastrar */
+  position: relative; /* 👈 necesario para posicionar el tooltip dentro */
+}
+
+/* Tooltip “Arrastra aquí para mover el chatbot” */
+.ia-chatbot-header-drag-tooltip {
+  position: absolute;
+  /* Dentro del header, pegado a la parte de abajo */
+  bottom: -24px; // 👈 antes -24px
+  left: 0;
+  transform: translateY(0);
+
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #f9fafb;
+  font-size: 11px;
+  white-space: nowrap;
+
+  pointer-events: none;
+  z-index: 25;
+  opacity: 1;
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
 }
