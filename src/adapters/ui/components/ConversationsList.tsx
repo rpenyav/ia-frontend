@@ -27,6 +27,15 @@ export const ConversationsList = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   /**
+   * Normalizamos las conversaciones a un array seguro.
+   * Si por cualquier razón "conversations" no es un array (null, objeto, etc.),
+   * lo convertimos a [] para evitar errores en .length y .map.
+   */
+  const safeConversations: Conversation[] = Array.isArray(conversations)
+    ? conversations
+    : [];
+
+  /**
    * Si no hay conversación seleccionada pero sí hay conversaciones,
    * seleccionamos por defecto la última creada (último elemento del array).
    * Esto solo actúa como *fallback*: si el contexto ya ha cargado una
@@ -36,13 +45,14 @@ export const ConversationsList = ({
   useEffect(() => {
     if (loading) return;
     if (selectedConversationId) return;
-    if (!conversations || conversations.length === 0) return;
+    if (!safeConversations || safeConversations.length === 0) return;
 
-    const lastConversation = conversations[conversations.length - 1];
+    const lastConversation = safeConversations[safeConversations.length - 1];
+
     if (lastConversation && lastConversation.id) {
       void onChange(lastConversation.id);
     }
-  }, [loading, selectedConversationId, conversations, onChange]);
+  }, [loading, selectedConversationId, safeConversations, onChange]);
 
   const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value || null;
@@ -92,7 +102,7 @@ export const ConversationsList = ({
             className="ia-chatbot-select"
             value={selectedConversationId ?? ""}
             onChange={handleSelectChange}
-            disabled={loading || conversations.length === 0}
+            disabled={loading || safeConversations.length === 0}
           >
             <option value="">
               {t(
@@ -100,7 +110,7 @@ export const ConversationsList = ({
                 "Selecciona una conversación..."
               )}
             </option>
-            {conversations.map((c) => (
+            {safeConversations.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.title}
               </option>

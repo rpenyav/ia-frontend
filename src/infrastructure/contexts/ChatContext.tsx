@@ -223,7 +223,17 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     setError("");
     try {
       const data = await conversationService.getConversations();
-      setConversations(data);
+
+      // 🔐 Normalizar siempre a array
+      const safeConversations = Array.isArray(data) ? data : [];
+      if (!Array.isArray(data)) {
+        console.error(
+          "[ChatContext] getConversations() ha devuelto algo que no es un array:",
+          data
+        );
+      }
+
+      setConversations(safeConversations);
     } catch (e) {
       console.error(e);
       setError("No se han podido cargar las conversaciones.");
@@ -243,16 +253,31 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       }
 
       try {
-        const storedId = window.localStorage.getItem(
-          SELECTED_CONVERSATION_STORAGE_KEY
-        );
+        const storedId =
+          typeof window !== "undefined"
+            ? window.localStorage.getItem(SELECTED_CONVERSATION_STORAGE_KEY)
+            : null;
 
         setLoadingConversations(true);
         const data = await conversationService.getConversations();
-        setConversations(data);
+
+        // 🔐 Normalizar a array siempre
+        const safeConversations = Array.isArray(data) ? data : [];
+        if (!Array.isArray(data)) {
+          console.error(
+            "[ChatContext] init: getConversations() ha devuelto algo que no es un array:",
+            data
+          );
+        }
+
+        setConversations(safeConversations);
         setLoadingConversations(false);
 
-        if (!data || data.length === 0) {
+        // 🔐 Si no hay conversaciones, no intentes leer .id
+        if (!safeConversations || safeConversations.length === 0) {
+          console.warn(
+            "[ChatContext] init: no hay conversaciones disponibles tras el login"
+          );
           setSelectedConversationId(null);
           setMessages([]);
           return;
@@ -261,44 +286,62 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         // 1) Intentamos usar la conversación almacenada
         let conversationIdToLoad: string | null = null;
 
-        if (storedId && data.some((c) => c.id === storedId)) {
+        if (storedId && safeConversations.some((c) => c && c.id === storedId)) {
           conversationIdToLoad = storedId;
         } else {
           // 2) Si no existe o no coincide, usamos la última conversación
-          conversationIdToLoad = data[data.length - 1].id;
-        }
-
-        if (conversationIdToLoad) {
-          setSelectedConversationId(conversationIdToLoad);
-          setLoadingMessages(true);
-          try {
-            const detail =
-              await conversationService.getConversationWithMessages(
-                conversationIdToLoad
-              );
-
-            const sortedMessages = [...detail.messages].sort(
-              (a, b) =>
-                new Date(a.createdAt).getTime() -
-                new Date(b.createdAt).getTime()
-            );
-
-            setMessages(sortedMessages);
-          } catch (e) {
-            console.error(
-              "[ChatContext] No se ha podido cargar la conversación inicial",
-              e
+          const last = safeConversations[safeConversations.length - 1];
+          if (last && last.id) {
+            conversationIdToLoad = last.id;
+          } else {
+            console.warn(
+              "[ChatContext] init: la última conversación no tiene id válido",
+              last
             );
             setSelectedConversationId(null);
             setMessages([]);
-          } finally {
-            setLoadingMessages(false);
+            return;
           }
+        }
+
+        if (!conversationIdToLoad) {
+          setSelectedConversationId(null);
+          setMessages([]);
+          return;
+        }
+
+        setSelectedConversationId(conversationIdToLoad);
+        setLoadingMessages(true);
+        try {
+          const detail = await conversationService.getConversationWithMessages(
+            conversationIdToLoad
+          );
+
+          const sortedMessages = Array.isArray(detail.messages)
+            ? [...detail.messages].sort(
+                (a, b) =>
+                  new Date(a.createdAt).getTime() -
+                  new Date(b.createdAt).getTime()
+              )
+            : [];
+
+          setMessages(sortedMessages);
+        } catch (e) {
+          console.error(
+            "[ChatContext] No se ha podido cargar la conversación inicial",
+            e
+          );
+          setSelectedConversationId(null);
+          setMessages([]);
+        } finally {
+          setLoadingMessages(false);
         }
       } catch (e) {
         console.error(e);
         setError("No se han podido cargar las conversaciones.");
         setLoadingConversations(false);
+        setSelectedConversationId(null);
+        setMessages([]);
       }
     };
 
@@ -340,6 +383,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
   // Persistir conversación seleccionada
   useEffect(() => {
     if (IS_EPHEMERAL) return;
+    if (typeof window === "undefined") return;
 
     if (selectedConversationId) {
       window.localStorage.setItem(
@@ -372,10 +416,12 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         idOrNew
       );
 
-      const sortedMessages = [...detail.messages].sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      );
+      const sortedMessages = Array.isArray(detail.messages)
+        ? [...detail.messages].sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          )
+        : [];
 
       setMessages(sortedMessages);
     } catch (e) {
@@ -570,11 +616,13 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
                 newSelectedId
               );
 
-            const sortedMessages = [...detail.messages].sort(
-              (a, b) =>
-                new Date(a.createdAt).getTime() -
-                new Date(b.createdAt).getTime()
-            );
+            const sortedMessages = Array.isArray(detail.messages)
+              ? [...detail.messages].sort(
+                  (a, b) =>
+                    new Date(a.createdAt).getTime() -
+                    new Date(b.createdAt).getTime()
+                )
+              : [];
 
             setMessages(sortedMessages);
           } finally {
