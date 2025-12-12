@@ -80,7 +80,7 @@ export const MessageBot = ({ message, isStreaming }: MessageBotProps) => {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeRaw]}
-              skipHtml={false}
+              skipHtml={true}
               components={{
                 p: ({ children }) => (
                   <p className="iachat-text-paragraph">{children}</p>
