@@ -8,7 +8,9 @@ export interface ChatMessage {
   id: string;
   role: ChatMessageRole;
   content: string;
-  createdAt: string;
+  createdAt?: string;
   conversationId?: string;
+  tenantId?: string;
+  userId?: string;
   attachments?: ChatAttachment[];
 }

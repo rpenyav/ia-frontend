@@ -1,11 +1,17 @@
 // src/core/domain/constants/apiEndpoints.ts
 export const API_ENDPOINTS = {
-  AUTH_LOGIN: "/auth/login",
+  AUTH_LOGIN: "/tenant/chat/auth/login",
 
-  CONVERSATIONS: "/conversations",
-  CONVERSATION_DETAIL: (id: string) => `/conversations/${id}`,
+  SERVICES: "/chat/services",
+  SERVICE_ENDPOINTS: (serviceCode: string) =>
+    `/chat/services/${serviceCode}/endpoints`,
 
-  CHAT_MESSAGE: "/chat/message",
-  UPLOAD_SINGLE: "/uploads",
-  UPLOAD_MULTIPLE: "/uploads/multiple",
+  CONVERSATIONS: "/chat/conversations",
+  CONVERSATION_DETAIL: (id: string) => `/chat/conversations/${id}`,
+  CONVERSATION_MESSAGES: (id: string) =>
+    `/chat/conversations/${id}/messages`,
+  CONVERSATION_MESSAGES_STREAM: (id: string) =>
+    `/chat/conversations/${id}/messages/stream`,
+
+  CHAT_MESSAGE: "/chat/conversations",
 } as const;

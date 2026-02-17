@@ -15,9 +15,20 @@ import type {
   Conversation,
   ChatMessage,
   ChatAttachment,
+  ServiceEndpoint,
 } from "../../interfaces";
 import { ConversationRepository, ChatRepository } from "../repositories";
 import { isAuthModeNone } from "../config/chatConfig";
+import {
+  getApiUrl,
+  getServiceCode,
+  getServiceId,
+  getTenantId,
+  getProviderId,
+  getModel,
+} from "../config/env";
+import { API_ENDPOINTS } from "../../core/domain/constants/apiEndpoints";
+import { fetchWithAuth } from "../api/api";
 
 const conversationRepository = new ConversationRepository();
 const chatRepository = new ChatRepository();
@@ -39,6 +50,16 @@ interface ChatContextValue {
   loadingMessages: boolean;
   isStreaming: boolean;
   error: string;
+  serviceEndpoints: ServiceEndpoint[];
+  serviceInfo: {
+    tenantId: string;
+    serviceCode: string;
+    serviceId: string;
+    providerId: string;
+    model: string;
+    apiUrl: string;
+    serviceName?: string;
+  };
 
   usageMode: UsageMode;
   usageRemainingMs: number | null;
@@ -210,6 +231,18 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [serviceEndpoints, setServiceEndpoints] = useState<ServiceEndpoint[]>(
+    []
+  );
+  const [serviceInfo, setServiceInfo] = useState({
+    tenantId: getTenantId(),
+    serviceCode: getServiceCode(),
+    serviceId: getServiceId(),
+    providerId: getProviderId(),
+    model: getModel(),
+    apiUrl: getApiUrl(),
+    serviceName: "",
+  });
 
   const [usageMode, setUsageMode] = useState<UsageMode>("idle");
   const [usageRemainingMs, setUsageRemainingMs] = useState<number | null>(null);
@@ -239,6 +272,34 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       setError("No se han podido cargar las conversaciones.");
     } finally {
       setLoadingConversations(false);
+    }
+  };
+
+  const loadServiceInfo = async () => {
+    if (IS_EPHEMERAL) {
+      return;
+    }
+    const serviceCode = getServiceCode();
+    if (!serviceCode) {
+      return;
+    }
+    try {
+      const services = await fetchWithAuth<any[]>(API_ENDPOINTS.SERVICES);
+      const matched = services.find((item) => item.serviceCode === serviceCode);
+      setServiceInfo((prev) => ({
+        ...prev,
+        serviceName: matched?.name || matched?.serviceCode || prev.serviceCode,
+      }));
+    } catch {
+      // ignore
+    }
+    try {
+      const endpoints = await fetchWithAuth<ServiceEndpoint[]>(
+        API_ENDPOINTS.SERVICE_ENDPOINTS(serviceCode)
+      );
+      setServiceEndpoints(endpoints);
+    } catch {
+      setServiceEndpoints([]);
     }
   };
 
@@ -378,6 +439,10 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
     update();
     const id = window.setInterval(update, 30_000);
     return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    void loadServiceInfo();
   }, []);
 
   // Persistir conversación seleccionada
@@ -648,6 +713,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       loadingMessages,
       isStreaming,
       error,
+      serviceEndpoints,
+      serviceInfo,
       usageMode,
       usageRemainingMs,
       reloadConversations,
@@ -664,6 +731,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
       loadingMessages,
       isStreaming,
       error,
+      serviceEndpoints,
+      serviceInfo,
       usageMode,
       usageRemainingMs,
     ]

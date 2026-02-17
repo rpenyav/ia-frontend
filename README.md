@@ -32,7 +32,7 @@ En el **frontend**:
 VITE_CHAT_AUTH_MODE=local
 ```
 
-En el **backend (NestJS)**, el modo debe coincidir:
+En el **backend (Manager)**, el modo debe coincidir:
 
 ```
 CHAT_AUTH_MODE=local
@@ -70,7 +70,7 @@ Desde este archivo se pueden ajustar, entre otros:
 
 - Node.js LTS instalado.
 - Gestor de paquetes `yarn`.
-- Backend NestJS del chatbot levantado en `http://localhost:3000` (o la URL que definamos).
+- Backend del Manager levantado en `http://localhost:3000` (o la URL que definamos).
 
 ### 2. Instalar dependencias (frontend)
 
@@ -83,9 +83,24 @@ yarn install
 Crear un fichero `.env.local` (o el que usemos por entorno) en el proyecto frontend con, al menos:
 
 ```
-VITE_API_BASE_URL=http://localhost:3000
+VITE_API_MANAGER=http://localhost:3000
+VITE_API_URL=http://localhost:3000
+VITE_API_KEY=...
+VITE_TENANT_ID=...
+VITE_SERVICE_CODE=...
+VITE_SERVICE_ID=...
+VITE_PROVIDER_ID=...
+VITE_MODEL=...
+VITE_CHAT_ENDPOINT=persisted
 VITE_CHAT_AUTH_MODE=local    # o none, según el caso
+VITE_PORT=8620
 ```
+
+Notas:
+- `VITE_API_MANAGER` es la URL del backend del Manager (para login, conversaciones, etc.).
+- `VITE_API_URL` es la URL base de la API del servicio del tenant (para mostrar endpoints concatenados).
+- `VITE_API_KEY`, `VITE_TENANT_ID`, `VITE_SERVICE_CODE` y `VITE_SERVICE_ID` deben venir de la asignación de servicio en el Manager.
+- El frontend consulta `/tenant/chat/auth/login`, `/chat/services` y `/chat/services/{serviceCode}/endpoints` usando `x-api-key`, `x-tenant-id` y el `x-chat-token` obtenido en login.
 
 ### 4. Levantar el frontend
 
@@ -96,14 +111,14 @@ yarn dev
 Por defecto, la app se servirá en algo como:
 
 ```
-http://localhost:8611
+http://localhost:8620
 ```
 
 (según la configuración de Vite que tengamos).
 
 ### 5. Backend IMPORTANTE!
 
-El servidor debe estar arrancado o levantado ien en localhost o bien en una API que se peuda llamar desde el .env
+El servidor debe estar arrancado o levantado bien en localhost o bien en una API que se pueda llamar desde el `.env`
 
 Este chatbot no funcionará si el backend no está levantado y funcionando en API REST
 

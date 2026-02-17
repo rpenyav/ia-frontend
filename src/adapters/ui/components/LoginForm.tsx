@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { useAuthContext } from "../../../infrastructure/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
+import { getServiceCode, getServiceId } from "../../../infrastructure/config/env";
 
 export const LoginForm = () => {
   const { login, loading, error } = useAuthContext();
@@ -12,7 +13,12 @@ export const LoginForm = () => {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await login({ email, password });
+    await login({
+      email,
+      password,
+      serviceCode: getServiceCode(),
+      tenantServiceId: getServiceId(),
+    });
   };
 
   return (

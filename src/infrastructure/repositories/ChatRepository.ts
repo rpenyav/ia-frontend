@@ -1,7 +1,12 @@
 // src/infrastructure/repositories/ChatRepository.ts
 
 import { API_ENDPOINTS } from "../../core/domain/constants/apiEndpoints";
-import type { ChatAttachment } from "../../interfaces";
+import type { ChatAttachment, Conversation } from "../../interfaces";
+import {
+  getModel,
+  getProviderId,
+  getServiceCode,
+} from "../config/env";
 import { fetchWithAuth } from "../api/api";
 
 export interface SendMessagePayload {
@@ -27,109 +32,123 @@ export class ChatRepository {
     payload: SendMessagePayload,
     onDelta: (delta: string, newConversationId: string | null) => void
   ): Promise<{ conversationId: string | null }> {
-    const response = await fetchWithAuth<Response>(API_ENDPOINTS.CHAT_MESSAGE, {
-      method: "POST",
-      body: JSON.stringify(payload),
-      rawResponse: true, // 👈 importante: aquí queremos el Response crudo
+    let conversationId: string | null = payload.conversationId ?? null;
+
+    console.info("[ChatRepository] sendMessageStream:start", {
+      conversationId,
+      messagePreview: payload.message?.slice(0, 80),
     });
 
-    if (!response.body) {
-      throw new Error("La respuesta del servidor no soporta streaming.");
+    if (!conversationId) {
+      const serviceCode = getServiceCode();
+      const providerId = getProviderId();
+      const model = getModel();
+      console.info("[ChatRepository] createConversation", {
+        serviceCode,
+        providerId,
+        model,
+      });
+      const created = await fetchWithAuth<Conversation>(API_ENDPOINTS.CONVERSATIONS, {
+        method: "POST",
+        body: JSON.stringify({
+          title: payload.message.slice(0, 48) || "Conversación",
+          serviceCode,
+          providerId,
+          model,
+        }),
+      });
+      conversationId = created.id;
+      console.info("[ChatRepository] conversationCreated", {
+        conversationId,
+      });
     }
+
+    if (!conversationId) {
+      throw new Error("No se pudo crear la conversación.");
+    }
+
+    console.info("[ChatRepository] stream:request", {
+      conversationId,
+      endpoint: API_ENDPOINTS.CONVERSATION_MESSAGES_STREAM(conversationId),
+    });
+    const response = await fetchWithAuth<Response>(
+      API_ENDPOINTS.CONVERSATION_MESSAGES_STREAM(conversationId),
+      {
+        method: "POST",
+        body: JSON.stringify({ content: payload.message }),
+        rawResponse: true,
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      console.warn("[ChatRepository] stream:response:error", {
+        status: response.status,
+        body: text,
+      });
+      throw new Error(
+        `Error en streaming (status ${response.status}): ${text || "sin detalle"}`
+      );
+    }
+
+    if (!response.body) {
+      throw new Error("El servidor no soporta streaming.");
+    }
+
+    console.info("[ChatRepository] stream:response:ok", {
+      status: response.status,
+    });
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder("utf-8");
-
     let buffer = "";
-    let conversationId: string | null = payload.conversationId ?? null;
+    let resolvedConversationId: string | null = conversationId;
 
-    const processLine = (line: string) => {
-      let text = line.trim();
-      if (!text) return;
-
-      // Soportamos SSE "data: {...}"
-      if (text.startsWith("data:")) {
-        text = text.slice(5).trim();
+    const flushEvent = (rawEvent: string) => {
+      const lines = rawEvent.split("\n");
+      let data = "";
+      for (const line of lines) {
+        if (line.startsWith("data:")) {
+          data += line.replace(/^data:\s?/, "");
+        }
       }
-      if (!text) return;
-
-      // Ignoramos control tokens típicos
-      if (text === "[DONE]") return;
-
+      if (!data) return;
       try {
-        const parsed: any = JSON.parse(text);
-
-        // Actualizamos conversationId si viene en el evento
-        if (typeof parsed.conversationId === "string") {
-          conversationId = parsed.conversationId;
+        const parsed = JSON.parse(data) as {
+          delta?: string;
+          conversationId?: string;
+          done?: boolean;
+        };
+        if (parsed.conversationId) {
+          resolvedConversationId = parsed.conversationId;
         }
-
-        let piece: string | undefined;
-
-        // 1) delta como string directo
-        if (typeof parsed.delta === "string") {
-          piece = parsed.delta;
-        }
-        // 2) delta anidado: { delta: { text: "..." } }
-        else if (parsed.delta && typeof parsed.delta.text === "string") {
-          piece = parsed.delta.text;
-        }
-        // 3) delta anidado: { delta: { content: "..." } }
-        else if (parsed.delta && typeof parsed.delta.content === "string") {
-          piece = parsed.delta.content;
-        }
-        // 4) content directo
-        else if (typeof parsed.content === "string") {
-          piece = parsed.content;
-        }
-        // 5) message directo
-        else if (typeof parsed.message === "string") {
-          piece = parsed.message;
-        }
-        // 6) estilo OpenAI: { choices: [{ delta: { content: "..." } }] }
-        else if (
-          parsed.choices &&
-          parsed.choices[0] &&
-          typeof parsed.choices[0].delta?.content === "string"
-        ) {
-          piece = parsed.choices[0].delta.content;
-        }
-
-        if (typeof piece === "string" && piece.length > 0) {
-          onDelta(piece, conversationId);
+        if (parsed.delta) {
+          onDelta(parsed.delta, resolvedConversationId);
         }
       } catch {
-        // No es JSON → lo tratamos como texto plano
-        if (text.length > 0) {
-          onDelta(text, conversationId);
-        }
+        onDelta(data, resolvedConversationId);
       }
     };
 
     while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) {
-        // 🔚 procesamos lo que quede en el buffer aunque no tenga '\n'
-        const remaining = buffer.trim();
-        if (remaining) {
-          processLine(remaining);
-        }
-        break;
-      }
-
+      const { value, done } = await reader.read();
+      if (done) break;
       buffer += decoder.decode(value, { stream: true });
-
-      // Procesamos línea a línea si llegan con '\n'
-      let newlineIndex = buffer.indexOf("\n");
-      while (newlineIndex !== -1) {
-        const line = buffer.slice(0, newlineIndex);
-        buffer = buffer.slice(newlineIndex + 1);
-        processLine(line);
-        newlineIndex = buffer.indexOf("\n");
+      let sepIndex = buffer.indexOf("\n\n");
+      while (sepIndex !== -1) {
+        const rawEvent = buffer.slice(0, sepIndex).trim();
+        buffer = buffer.slice(sepIndex + 2);
+        if (rawEvent) {
+          flushEvent(rawEvent);
+        }
+        sepIndex = buffer.indexOf("\n\n");
       }
     }
 
-    return { conversationId };
+    if (buffer.trim()) {
+      flushEvent(buffer.trim());
+    }
+
+    return { conversationId: resolvedConversationId };
   }
 }

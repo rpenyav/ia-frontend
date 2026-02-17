@@ -25,6 +25,8 @@ export const Chatbot = () => {
     loadingConversations,
     isStreaming,
     error,
+    serviceEndpoints,
+    serviceInfo,
     selectConversation,
     sendMessage,
     createConversation,
@@ -95,8 +97,37 @@ export const Chatbot = () => {
           onChange={selectConversation}
           onCreateConversation={createConversation}
           onDeleteConversation={deleteConversation}
+          allowDelete={false}
         />
       )}
+
+      <div className="ia-chatbot-service-info">
+        <div className="ia-chatbot-service-line">
+          <strong>Tenant:</strong> {serviceInfo.tenantId || "—"}
+        </div>
+        <div className="ia-chatbot-service-line">
+          <strong>Servicio:</strong>{" "}
+          {serviceInfo.serviceName || serviceInfo.serviceCode || "—"}
+        </div>
+        <div className="ia-chatbot-service-line">
+          <strong>Service ID:</strong> {serviceInfo.serviceId || "—"}
+        </div>
+        {serviceEndpoints.length > 0 && (
+          <div className="ia-chatbot-service-line">
+            <strong>Endpoints:</strong>
+            <ul className="ia-chatbot-endpoints">
+              {serviceEndpoints.map((endpoint) => (
+                <li key={endpoint.id}>
+                  {endpoint.method}{" "}
+                  {serviceInfo.apiUrl
+                    ? `${serviceInfo.apiUrl.replace(/\/+$/, "")}${endpoint.path}`
+                    : endpoint.path}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
 
       <div className="ia-chatbot-messages">
         {messages.map((msg) =>

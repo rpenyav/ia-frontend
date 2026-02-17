@@ -10,6 +10,7 @@ export interface ConversationsListProps {
   onChange: (idOrNew: string | null) => Promise<void>;
   onCreateConversation: (title: string) => Promise<void>;
   onDeleteConversation: (id: string) => Promise<void>;
+  allowDelete?: boolean;
 }
 
 export const ConversationsList = ({
@@ -19,6 +20,7 @@ export const ConversationsList = ({
   onChange,
   onCreateConversation,
   onDeleteConversation,
+  allowDelete = true,
 }: ConversationsListProps) => {
   const { t } = useTranslation("common");
 
@@ -130,7 +132,7 @@ export const ConversationsList = ({
             type="button"
             className="ia-chatbot-new-conversation-button"
             onClick={handleOpenDelete}
-            disabled={loading || !selectedConversationId}
+            disabled={loading || !selectedConversationId || !allowDelete}
           >
             {t("conversations_delete_button", "Eliminar")}
           </button>
@@ -178,7 +180,7 @@ export const ConversationsList = ({
       )}
 
       {/* Modal confirmar eliminación */}
-      {showDeleteModal && (
+      {showDeleteModal && allowDelete && (
         <div className="ia-chatbot-modal-backdrop">
           <div className="ia-chatbot-modal">
             <h2 className="ia-chatbot-modal-title">

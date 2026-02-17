@@ -1,4 +1,9 @@
-import { getApiBaseUrl, getAuthToken } from "../config/env";
+import {
+  getApiBaseUrl,
+  getAuthToken,
+  getServiceApiKey,
+  getTenantId,
+} from "../config/env";
 
 export class ApiError extends Error {
   status: number;
@@ -28,10 +33,13 @@ export async function fetchWithAuth<T = unknown>(
   const baseUrl = getApiBaseUrl();
   const url = `${baseUrl}${path}`;
   const token = getAuthToken();
+  const apiKey = getServiceApiKey();
+  const tenantId = getTenantId();
 
   const {
     headers: customHeaders,
     rawResponse = false,
+    credentials = "omit",
     ...restOptions
   } = options;
 
@@ -45,8 +53,14 @@ export async function fetchWithAuth<T = unknown>(
     ...(customHeaders as Record<string, string> | undefined),
   };
 
+  if (apiKey) {
+    headers["x-api-key"] = apiKey;
+  }
+  if (tenantId) {
+    headers["x-tenant-id"] = tenantId;
+  }
   if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers["x-chat-token"] = token;
   }
 
   let response: Response;
@@ -54,7 +68,7 @@ export async function fetchWithAuth<T = unknown>(
     response = await fetch(url, {
       ...restOptions,
       headers,
-      credentials: "include",
+      credentials,
     });
   } catch {
     // Error de red / CORS / servidor caído

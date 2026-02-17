@@ -1,6 +1,6 @@
 // src/infrastructure/repositories/UploadRepository.ts
 
-import { getApiBaseUrl, getAuthToken } from "../config/env";
+import { fetchWithAuth, ApiError } from "../api/api";
 import type { ChatAttachment } from "../../interfaces";
 
 // ⬆️ Límite aumentado a 5 MB
@@ -83,37 +83,28 @@ export class UploadRepository {
    */
   async uploadSingle(file: File): Promise<ChatAttachment> {
     const [validFile] = this.validateFiles([file]);
-    const baseUrl = getApiBaseUrl();
 
     const formData = new FormData();
     formData.append("file", validFile); // 👈 single → "file"
 
-    const token = getAuthToken();
-    const headers: HeadersInit = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const res = await fetch(`${baseUrl}/uploads`, {
-      method: "POST",
-      body: formData,
-      headers,
-      credentials: "include",
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.error("[UploadRepository.uploadSingle] Error response:", text);
-      throw new Error(
-        `No se ha podido subir el archivo (status ${res.status}).`
-      );
-    }
-
-    const data = (await res.json()) as {
+    let data: {
       ok: boolean;
       attachment?: ChatAttachment;
       attachments?: ChatAttachment[];
     };
+    try {
+      data = await fetchWithAuth("/uploads", {
+        method: "POST",
+        body: formData,
+      });
+    } catch (err: unknown) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "No se ha podido subir el archivo.";
+      console.error("[UploadRepository.uploadSingle] Error:", err);
+      throw new Error(message);
+    }
 
     if (!data.ok) {
       throw new Error("El servidor ha devuelto ok=false al subir el archivo.");
@@ -137,36 +128,24 @@ export class UploadRepository {
    */
   async uploadMultiple(files: File[]): Promise<ChatAttachment[]> {
     const validFiles = this.validateFiles(files);
-    const baseUrl = getApiBaseUrl();
 
     const formData = new FormData();
     validFiles.forEach((file) => formData.append("files", file)); // 👈 multiple → "files"
 
-    const token = getAuthToken();
-    const headers: HeadersInit = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
+    let data: { ok: boolean; attachments?: ChatAttachment[] };
+    try {
+      data = await fetchWithAuth("/uploads/multiple", {
+        method: "POST",
+        body: formData,
+      });
+    } catch (err: unknown) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "No se han podido subir los archivos.";
+      console.error("[UploadRepository.uploadMultiple] Error:", err);
+      throw new Error(message);
     }
-
-    const res = await fetch(`${baseUrl}/uploads/multiple`, {
-      method: "POST",
-      body: formData,
-      headers,
-      credentials: "include",
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.error("[UploadRepository.uploadMultiple] Error response:", text);
-      throw new Error(
-        `No se han podido subir los archivos (status ${res.status}).`
-      );
-    }
-
-    const data = (await res.json()) as {
-      ok: boolean;
-      attachments?: ChatAttachment[];
-    };
 
     if (!data.ok) {
       throw new Error(

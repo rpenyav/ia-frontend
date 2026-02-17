@@ -391,6 +391,31 @@
   opacity: 0.6;
 }
 
+/* Info del servicio */
+
+.ia-chatbot-service-info {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #fff;
+  font-size: 0.75rem;
+  color: #4b5563;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ia-chatbot-service-line {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ia-chatbot-endpoints {
+  margin: 0.35rem 0 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.15rem;
+}
+
 /* Área de mensajes */
 
 .ia-chatbot-messages {
